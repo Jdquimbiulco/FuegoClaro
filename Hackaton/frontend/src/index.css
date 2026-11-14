@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #05080e;
+  --panel: #0a111b;
+  --panel-2: #0d1622;
+  --border: #1b2a3f;
+  --text: #e8eff9;
+  --muted: #8ea3be;
+  --ember: #ff5c16;
+  --modis: #ffb020;
+  --viirs: #ff4d5e;
+  color-scheme: dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(255, 92, 22, 0.12), transparent 60%),
+    radial-gradient(800px 450px at 95% 0%, rgba(255, 176, 32, 0.06), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+::selection {
+  background: rgba(255, 92, 22, 0.35);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #070c14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1d3048;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a415d;
+}
+
+/* ------------------------------------------------------------------ layout */
+.panel {
+  @apply rounded-2xl border border-ink-700/80 bg-ink-850/85 shadow-panel backdrop-blur;
+}
+
+.panel-soft {
+  @apply rounded-xl border border-ink-700/60 bg-ink-800/60;
+}
+
+.eyebrow {
+  @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slateish;
+}
+
+.num {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ leaflet */
+.leaflet-container {
+  background: #060b12;
+  font-family: inherit;
+}
+
+.leaflet-control-attribution {
+  background: rgba(5, 8, 14, 0.75) !important;
+  color: #8ea3be !important;
+  font-size: 10px !important;
+  backdrop-filter: blur(4px);
+}
+.leaflet-control-attribution a {
+  color: #b9c9dd !important;
+}
+
+.leaflet-bar,
+.leaflet-control-zoom a {
+  background: #0d1622 !important;
+  color: #e8eff9 !important;
+  border-color: #1b2a3f !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #152336 !important;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #0b1320 !important;
+  color: #e8eff9 !important;
+  border: 1px solid #1b2a3f;
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.9) !important;
+}
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.leaflet-popup-close-button {
+  color: #8ea3be !important;
+}
+
+.fire-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+.fire-marker {
+  display: block;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--c, #ff5c16);
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, #ff5c16) 22%, transparent), 0 0 12px color-mix(in srgb, var(--c, #ff5c16) 55%, transparent);
+}
+
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  background: rgba(255, 92, 22, 0.16) !important;
+}
+.marker-cluster-small div,
+.marker-cluster-medium div,
+.marker-cluster-large div {
+  background: rgba(255, 92, 22, 0.55) !important;
+  color: #fff !important;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  box-shadow: 0 0 0 6px rgba(255, 92, 22, 0.12);
+}
+
+/* ------------------------------------------------------------------ calendar */
+.calendar-cell {
+  @apply relative flex min-h-[72px] flex-col justify-between rounded-lg border p-2 text-left transition;
+  border-color: rgba(27, 42, 63, 0.8);
+  background: rgba(13, 22, 34, 0.55);
+}
+.calendar-cell:hover {
+  border-color: rgba(255, 92, 22, 0.55);
+  transform: translateY(-1px);
+}
+.calendar-cell.int-1 {
+  background: rgba(255, 92, 22, 0.14);
+  border-color: rgba(255, 92, 22, 0.25);
+}
+.calendar-cell.int-2 {
+  background: rgba(255, 92, 22, 0.27);
+  border-color: rgba(255, 92, 22, 0.35);
+}
+.calendar-cell.int-3 {
+  background: rgba(255, 92, 22, 0.44);
+  border-color: rgba(255, 140, 60, 0.45);
+}
+.calendar-cell.int-4 {
+  background: linear-gradient(135deg, rgba(255, 92, 22, 0.78), rgba(232, 71, 11, 0.7));
+  border-color: rgba(255, 164, 92, 0.6);
+}
+.calendar-cell.selected {
+  outline: 2px solid rgba(255, 176, 32, 0.9);
+  outline-offset: 1px;
+}
+
+/* ------------------------------------------------------------------ misc */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(255, 92, 22, 0.85);
+  outline-offset: 2px;
+}
+
+.recharts-cartesian-axis-tick text {
+  fill: #8ea3be;
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: rgba(27, 42, 63, 0.65);
+}
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+.recharts-default-tooltip {
+  background: #0b1320 !important;
+  border: 1px solid #1b2a3f !important;
+  border-radius: 10px !important;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+  cursor: pointer;
+}
+
+select option {
+  background: #0d1622;
+  color: #e8eff9;
+}

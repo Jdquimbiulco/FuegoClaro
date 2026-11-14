@@ -1,0 +1,193 @@
+{
+  "dataset_version": "fuegoclaro-20261113T003529Z",
+  "generated_at": "2026-11-13T00:52:59.899999+00:00",
+  "data_mode": "sample",
+  "source": "NASA FIRMS – Fire Information for Resource Management System",
+  "source_url": "https://firms.modaps.eosdis.nasa.gov/",
+  "attribution": "NASA FIRMS (MODIS Collection 6.1 y VIIRS 375 m). Datos procesados por FuegoClaro.",
+  "requested_period": {
+    "start": "2022-01-01",
+    "end": "2026-11-12"
+  },
+  "bbox": [
+    -92.5,
+    -5.5,
+    -74.5,
+    2.0
+  ],
+  "sources": [
+    {
+      "source_product": "MODIS_SP",
+      "start": "2022-01-01",
+      "end": "2026-08-31",
+      "records": 30510,
+      "sensor": "MODIS",
+      "label": "MODIS Collection 6.1 (Terra/Aqua, ~1 km)"
+    },
+    {
+      "source_product": "MODIS_NRT",
+      "start": "2026-09-01",
+      "end": "2026-11-12",
+      "records": 656,
+      "sensor": "MODIS",
+      "label": "MODIS Collection 6.1 (Terra/Aqua, ~1 km)"
+    },
+    {
+      "source_product": "VIIRS_NOAA20_SP",
+      "start": "2022-01-01",
+      "end": "2026-07-31",
+      "records": 140977,
+      "sensor": "VIIRS",
+      "label": "VIIRS 375 m (NOAA-20)"
+    },
+    {
+      "source_product": "VIIRS_NOAA20_NRT",
+      "start": "2026-08-01",
+      "end": "2026-11-12",
+      "records": 5978,
+      "sensor": "VIIRS",
+      "label": "VIIRS 375 m (NOAA-20)"
+    }
+  ],
+  "availability": {
+    "MODIS_NRT": {
+      "min": "2026-09-01",
+      "max": "2026-11-12"
+    },
+    "MODIS_SP": {
+      "min": "2000-11-01",
+      "max": "2026-08-31"
+    },
+    "VIIRS_NOAA20_NRT": {
+      "min": "2026-08-01",
+      "max": "2026-11-12"
+    },
+    "VIIRS_NOAA20_SP": {
+      "min": "2018-04-01",
+      "max": "2026-07-31"
+    },
+    "VIIRS_NOAA21_NRT": {
+      "min": "2024-01-17",
+      "max": "2026-11-12"
+    },
+    "VIIRS_NOAA21_SP": {
+      "min": "2023-03-01",
+      "max": "2026-07-31"
+    },
+    "VIIRS_SNPP_NRT": {
+      "min": "2026-08-01",
+      "max": "2026-11-02"
+    },
+    "VIIRS_SNPP_SP": {
+      "min": "2012-01-20",
+      "max": "2026-07-31"
+    },
+    "LANDSAT_NRT": {
+      "min": "2022-06-20",
+      "max": "2026-11-12"
+    },
+    "GOES_NRT": {
+      "min": "2022-08-09",
+      "max": "2026-11-13"
+    },
+    "BA_MODIS": {
+      "min": "2000-11-01",
+      "max": "2026-08-01"
+    },
+    "BA_VIIRS": {
+      "min": "2012-03-01",
+      "max": "2026-08-01"
+    }
+  },
+  "records": {
+    "raw_downloaded": 178121,
+    "normalized": 178121,
+    "excluded_outside_ecuador": 61392,
+    "input": 116729,
+    "dropped_missing_fields": 0,
+    "dropped_invalid_coords": 0,
+    "dropped_invalid_datetime": 0,
+    "dropped_duplicates": 0,
+    "valid": 116729,
+    "final": 4951,
+    "by_sensor": {
+      "VIIRS": 96347,
+      "MODIS": 20382
+    },
+    "by_source_product": {
+      "VIIRS_NOAA20_SP": 92676,
+      "MODIS_SP": 19914,
+      "VIIRS_NOAA20_NRT": 3671,
+      "MODIS_NRT": 468
+    },
+    "by_confidence": {
+      "nominal": 99805,
+      "high": 10302,
+      "low": 6622
+    },
+    "by_region": {
+      "costa": 53053,
+      "sierra": 24483,
+      "amazonia": 19662,
+      "galapagos": 19531
+    }
+  },
+  "date_range": {
+    "start": "2022-01-01",
+    "end": "2026-11-12"
+  },
+  "fields": [
+    "id",
+    "source_product",
+    "sensor",
+    "satellite",
+    "instrument",
+    "latitude",
+    "longitude",
+    "acq_date",
+    "acq_time",
+    "acquired_at_utc",
+    "acq_date_local",
+    "acq_time_local",
+    "daynight",
+    "confidence_raw",
+    "confidence_level",
+    "confidence_score",
+    "frp",
+    "brightness",
+    "bright_t31",
+    "bright_ti5",
+    "scan",
+    "track",
+    "version",
+    "type",
+    "province",
+    "province_id",
+    "region",
+    "region_id",
+    "provenance_id"
+  ],
+  "transformations": [
+    "Normalización de campos MODIS/VIIRS a esquema canónico.",
+    "Confianza MODIS 0-100 -> low/nominal/high (umbrales 30/80); VIIRS l/n/h -> low/nominal/high.",
+    "Asignación de provincia y región natural mediante geometrías Natural Earth (1:10m).",
+    "Exclusión de detecciones fuera de las provincias de Ecuador.",
+    "Fecha/hora local: UTC-5 (continental) y UTC-6 (Galápagos).",
+    "Deduplicación por huella determinista (producto, satélite, fecha, hora, lat, lon).",
+    "No se modifican los valores originales de confianza, FRP ni temperaturas de brillo."
+  ],
+  "limitations": [
+    "Una detección de foco de calor no equivale a un incendio confirmado ni a superficie quemada.",
+    "MODIS (~1 km) y VIIRS (~375 m) tienen resolución, sensibilidad y horarios de pasada distintos.",
+    "La ausencia de detección no implica ausencia de fuego (nubes, humo, geometría de observación).",
+    "Los conteos de detecciones no son directamente comparables como área afectada.",
+    "Datos SP (procesamiento estándar) y NRT (tiempo casi real) pueden diferir; se documenta el producto por registro."
+  ],
+  "file": {
+    "path": "data/samples/detections_sample.csv",
+    "sha256": "b587f66a7c43836284aabf9a11fb8087185281aab33bf2bf73ad38368a3b65ba",
+    "bytes": 1275992
+  },
+  "warnings": [],
+  "note": "Muestra auténtica de NASA FIRMS para demo offline. No es el dataset completo."
+}

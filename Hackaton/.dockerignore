@@ -1,0 +1,38 @@
+# Git / editor
+.git
+.gitignore
+.vscode
+.idea
+
+# Python
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+backend/.venv
+venv
+
+# Node
+frontend/node_modules
+frontend/dist
+npm-debug.log*
+
+# Secretos y configuración local
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+
+# Datos que no necesitan entrar en la imagen (se montan en runtime)
+data/raw
+data/manifests
+
+# Documentación no necesaria en runtime
+docs
+README.md
+GUIA_DE_INICIO.md
+
+# Varios
+*.log
+.DS_Store
