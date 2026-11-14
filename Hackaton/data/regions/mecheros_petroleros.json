@@ -1,0 +1,14 @@
+{
+  "source": "Lista provisional de coordenadas de mecheros petroleros en Sucumbíos/Orellana",
+  "precision": "aproximada (centros de campos petroleros, radio 3 km). REEMPLAZAR con la lista oficial provista por el equipo, manteniendo el formato: sources[].name/lat/lon",
+  "radius_km_default": 3.0,
+  "sources": [
+    { "name": "Shushufindi", "lat": -0.133, "lon": -76.633 },
+    { "name": "Libertador", "lat": -0.530, "lon": -76.630 },
+    { "name": "Sacha", "lat": -0.480, "lon": -76.620 },
+    { "name": "Auca", "lat": -0.520, "lon": -76.780 },
+    { "name": "Lago Agrio", "lat": 0.080, "lon": -76.800 },
+    { "name": "Indillama", "lat": -0.550, "lon": -76.710 },
+    { "name": "Aguarico", "lat": -0.280, "lon": -76.150 }
+  ]
+}
