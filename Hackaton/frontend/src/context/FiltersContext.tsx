@@ -1,12 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type { FilterState, Meta } from '../types/api'
 import { withQuery } from '../services/api'
 
+export type ViewMode = 'basic' | 'expert'
+
 interface FiltersContextValue {
   meta: Meta
   filters: FilterState
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
+  toggleViewMode: () => void
   update: (patch: Partial<FilterState>) => void
   setDay: (day: string) => void
   reset: () => void
@@ -19,6 +24,28 @@ const FiltersContext = createContext<FiltersContextValue | null>(null)
 
 export function FiltersProvider({ meta, children }: { meta: Meta; children: ReactNode }) {
   const [searchParams, setSearchParams] = useSearchParams()
+
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('fuegoclaro_view_mode')
+      return saved === 'expert' ? 'expert' : 'basic'
+    } catch {
+      return 'basic'
+    }
+  })
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode)
+    try {
+      localStorage.setItem('fuegoclaro_view_mode', mode)
+    } catch {
+      // ignore storage errors
+    }
+  }, [])
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode(viewMode === 'basic' ? 'expert' : 'basic')
+  }, [viewMode, setViewMode])
 
   const filters: FilterState = useMemo(
     () => ({
@@ -125,8 +152,32 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
   )
 
   const value = useMemo(
-    () => ({ meta, filters, update, setDay, reset, apiPath, regionName, activeFilterCount }),
-    [meta, filters, update, setDay, reset, apiPath, regionName, activeFilterCount],
+    () => ({
+      meta,
+      filters,
+      viewMode,
+      setViewMode,
+      toggleViewMode,
+      update,
+      setDay,
+      reset,
+      apiPath,
+      regionName,
+      activeFilterCount,
+    }),
+    [
+      meta,
+      filters,
+      viewMode,
+      setViewMode,
+      toggleViewMode,
+      update,
+      setDay,
+      reset,
+      apiPath,
+      regionName,
+      activeFilterCount,
+    ],
   )
 
   return <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
