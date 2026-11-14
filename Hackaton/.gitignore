@@ -16,15 +16,10 @@ dist/
 .env.*
 !.env.example
 
-# Data (raw descargado y procesados grandes)
-data/raw/*
-data/processed/*
-data/manifests/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/manifests/.gitkeep
-# La muestra offline sí se versiona para que la demo funcione sin ingesta.
-!data/samples/detections_sample.csv
+# Data (descomentado para que el equipo cuente con el dataset completo para entrenar modelos y clustering)
+# data/raw/*
+# data/processed/*
+# data/manifests/*
 
 # OS / editor
 .DS_Store
