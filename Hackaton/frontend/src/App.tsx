@@ -6,6 +6,7 @@ import { Layout } from './components/layout/Layout'
 import { ErrorState } from './components/ui/Primitives'
 import type { Meta } from './types/api'
 import DashboardPage from './pages/DashboardPage'
+import FiresPage from './pages/FiresPage'
 import MapPage from './pages/MapPage'
 import CalendarPage from './pages/CalendarPage'
 import ComparePage from './pages/ComparePage'
@@ -56,6 +57,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="incendios" element={<FiresPage />} />
           <Route path="mapa" element={<MapPage />} />
           <Route path="calendario" element={<CalendarPage />} />
           <Route path="comparador" element={<ComparePage />} />
