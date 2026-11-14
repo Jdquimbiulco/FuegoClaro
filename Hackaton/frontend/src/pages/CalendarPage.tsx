@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '../components/layout/Layout'
+import { FiltersBar } from '../components/layout/FiltersBar'
 import {
   Badge,
   Card,
@@ -120,6 +121,8 @@ export default function CalendarPage() {
           </div>
         }
       />
+
+      <FiltersBar />
 
       {calendarState.error ? (
         <ErrorState message={calendarState.error} onRetry={calendarState.refetch} />

@@ -16,6 +16,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { FiresMap } from '../components/map/FiresMap'
 import { PageHeader } from '../components/layout/Layout'
+import { FiltersBar } from '../components/layout/FiltersBar'
 import {
   Badge,
   Card,
@@ -124,6 +125,8 @@ export default function MapPage() {
           Ver Módulo de Incendios <ArrowRight size={12} />
         </Link>
       </div>
+
+      <FiltersBar />
 
       {detectionsState.error ? (
         <ErrorState message={detectionsState.error} onRetry={detectionsState.refetch} />

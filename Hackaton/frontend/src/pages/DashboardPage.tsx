@@ -21,6 +21,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfidenceDonut, RegionBars, SensorSplit, TimeSeriesChart } from '../components/charts/Charts'
 import { PageHeader } from '../components/layout/Layout'
+import { FiltersBar } from '../components/layout/FiltersBar'
 import {
   Badge,
   Card,
@@ -214,7 +215,10 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 2. Tres Indicadores Vitales (Reducción de Carga Cognitiva) */}
+          {/* 2. Filtros de Territorio y Período (DEBAJO del diagnóstico) */}
+          <FiltersBar />
+
+          {/* 3. Tres Indicadores Vitales (Reducción de Carga Cognitiva) */}
           <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <StatCard
               label="Focos térmicos observados"
@@ -381,6 +385,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Filtros de Telemetría Satelital */}
+          <FiltersBar />
 
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
