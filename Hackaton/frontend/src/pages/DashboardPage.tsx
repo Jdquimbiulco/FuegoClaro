@@ -71,6 +71,49 @@ export default function DashboardPage() {
   const highConfidenceCount = summary?.by_confidence?.high ?? 0
   const highConfidenceShare = summary?.total ? highConfidenceCount / summary.total : 0
 
+  const sensorCardData = useMemo(() => {
+    if (filters.sensor === 'MODIS') {
+      return {
+        label: 'Sensor Activo: MODIS',
+        value: formatNumber(modisCount),
+        sub: '100% de la selección · ~1 km (Terra/Aqua)',
+      }
+    }
+    if (filters.sensor === 'VIIRS') {
+      return {
+        label: 'Sensor Activo: VIIRS',
+        value: formatNumber(viirsCount),
+        sub: '100% de la selección · ~375 m (NOAA-20)',
+      }
+    }
+    if (viirsCount === 0 && modisCount > 0) {
+      return {
+        label: 'Sensor: Solo MODIS',
+        value: formatNumber(modisCount),
+        sub: 'Solo se registraron focos con MODIS en este periodo',
+      }
+    }
+    if (modisCount === 0 && viirsCount > 0) {
+      return {
+        label: 'Sensor: Solo VIIRS',
+        value: formatNumber(viirsCount),
+        sub: 'Solo se registraron focos con VIIRS en este periodo',
+      }
+    }
+    if (viirsCount === 0 && modisCount === 0) {
+      return {
+        label: 'Balance VIIRS / MODIS',
+        value: '0',
+        sub: 'Sin registros para los filtros seleccionados',
+      }
+    }
+    return {
+      label: 'Balance VIIRS / MODIS',
+      value: `${formatNumber(viirsCount)} / ${formatNumber(modisCount)}`,
+      sub: `VIIRS: ${formatPercent(viirsShare)} · MODIS: ${formatPercent(modisShare)}`,
+    }
+  }, [filters.sensor, modisCount, modisShare, viirsCount, viirsShare])
+
   const alertLevel = useMemo(() => {
     if (!summary || summary.total === 0) {
       return {
@@ -397,9 +440,9 @@ export default function DashboardPage() {
               icon={Flame}
             />
             <StatCard
-              label="Balance VIIRS / MODIS"
-              value={`${formatNumber(viirsCount)} / ${formatNumber(modisCount)}`}
-              sub={`VIIRS: ${formatPercent(viirsShare)} · MODIS: ${formatPercent(modisShare)}`}
+              label={sensorCardData.label}
+              value={sensorCardData.value}
+              sub={sensorCardData.sub}
               icon={Satellite}
               accent="#FFB020"
             />
