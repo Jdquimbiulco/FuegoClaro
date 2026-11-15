@@ -3,9 +3,8 @@ services:
   - type: web
     name: fuegoclaro-backend
     runtime: docker
-    rootDir: Hackaton
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
+    dockerfilePath: ./Hackaton/backend/Dockerfile
+    dockerContext: ./Hackaton
     plan: free
     healthCheckPath: /api/v1/health
     envVars:
@@ -30,8 +29,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: fuegoclaro-backend
-          property: host
-        transform: https://$VALUE/api/v1
+        value: "https://fuegoclaro-backend.onrender.com/api/v1"
