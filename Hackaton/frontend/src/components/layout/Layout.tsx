@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import { useFilters } from '../../context/FiltersContext'
 import { DISCLAIMER } from '../../lib/constants'
 import { Notice } from '../ui/Primitives'
-import { FiltersBar } from './FiltersBar'
 import { MobileNav, Sidebar, Topbar } from './Sidebar'
 import { Outlet } from 'react-router-dom'
 
@@ -74,7 +73,6 @@ export function Layout() {
         <main className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 lg:px-7">
           <Topbar meta={meta} />
           <DataModeBanner />
-          <FiltersBar />
           <Outlet />
           <footer className="mt-8 border-t border-ink-700/60 pb-6 pt-4 text-[10px] leading-relaxed text-slateish">
             <p>{DISCLAIMER}</p>
