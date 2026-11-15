@@ -140,6 +140,58 @@ def _neighbour_pairs(
     return i[keep], j[keep]
 
 
+def _connected_components(lat, lon, day_ord, eps_km, eps_days):
+    """min_points=1 is connected components, with bounded candidate tiles.
+
+    Preserve the original 3x3 grid, day offsets, haversine predicate and
+    component order. No distance approximation or geometry simplification.
+    """
+    n = len(lat)
+    eps_deg = _degrees_for_km(eps_km)
+    buckets = {}
+    for index, key in enumerate(zip(np.floor(lat / eps_deg).astype("int64"),
+                                    np.floor(lon / eps_deg).astype("int64"), day_ord)):
+        buckets.setdefault(tuple(key), []).append(index)
+    buckets = {key: np.asarray(rows, dtype=np.int64) for key, rows in buckets.items()}
+    parent = list(range(n))
+
+    def root(index):
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    offsets = [(a, b, c) for a in (-1, 0, 1) for b in (-1, 0, 1)
+               for c in range(-eps_days, eps_days + 1) if (a, b, c) >= (0, 0, 0)]
+    for (a, b, c), rows in buckets.items():
+        for da, db, dc in offsets:
+            other = buckets.get((a + da, b + db, c + dc))
+            if other is None:
+                continue
+            for start in range(0, len(rows), 128):
+                first = rows[start:start + 128]
+                for end in range(0, len(other), 128):
+                    second = other[end:end + 128]
+                    i = np.repeat(first, len(second))
+                    j = np.tile(second, len(first))
+                    if (da, db, dc) == (0, 0, 0):
+                        keep = i < j
+                        i, j = i[keep], j[keep]
+                    if not len(i):
+                        continue
+                    keep = _haversine_km(lat[i], lon[i], lat[j], lon[j]) <= eps_km
+                    for left, right in zip(i[keep].tolist(), j[keep].tolist()):
+                        ra, rb = root(left), root(right)
+                        if ra != rb:
+                            parent[max(ra, rb)] = min(ra, rb)
+    labels = np.empty(n, dtype=np.int64)
+    numbering = {}
+    for index in range(n):
+        representative = root(index)
+        labels[index] = numbering.setdefault(representative, len(numbering))
+    return labels
+
+
 def _dbscan_st(
     lat: np.ndarray,
     lon: np.ndarray,
@@ -153,6 +205,9 @@ def _dbscan_st(
     labels = np.full(n, -1, dtype=np.int64)
     if n == 0:
         return labels
+
+    if min_points == 1:
+        return _connected_components(lat, lon, day_ord, eps_km, eps_days)
 
     pair_i, pair_j = _neighbour_pairs(lat, lon, day_ord, eps_km, eps_days)
 

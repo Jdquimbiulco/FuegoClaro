@@ -82,22 +82,41 @@ class FireRiskPredictor:
 
     def _load_row(self, cell: str, when: pd.Timestamp) -> tuple[pd.Series, bool]:
         """Devuelve la fila de features y si es histórica exacta."""
-        filters = [("cell_id", "==", cell), ("date", "==", np.datetime64(when.to_datetime64()))]
-        frame = pd.read_parquet(self.dataset_path, filters=filters)
-        if not frame.empty:
-            return frame.iloc[0], True
-        frame = pd.read_parquet(self.dataset_path, filters=[("cell_id", "==", cell)])
-        if frame.empty:
+        import pyarrow.parquet as pq
+        parquet = pq.ParquetFile(self.dataset_path)
+        candidates = []
+        for group in range(parquet.num_row_groups):
+            keys = parquet.read_row_group(group, columns=["cell_id", "date"], use_threads=False).to_pandas()
+            selected = keys.loc[keys["cell_id"] == cell, ["date"]].copy()
+            selected["_row"] = selected.index
+            selected["_group"] = group
+            candidates.append(selected)
+            del keys
+        history = pd.concat(candidates, ignore_index=True)
+        if history.empty:
             raise ValueError(f"No hay historial para la celda {cell}")
-        frame["date"] = pd.to_datetime(frame["date"])
-        frame = frame.sort_values("date")
-        past = frame[frame["date"] <= when]
-        if past.empty:
-            raise ValueError(
-                f"La fecha {when.date()} es anterior al inicio del historial de la celda {cell} "
-                f"({frame['date'].min().date()})."
-            )
-        return past.iloc[-1], False
+        exact_rows = history.loc[history["date"] == when]
+        exact = not exact_rows.empty
+        if exact:
+            selected = exact_rows.iloc[0]
+        else:
+            history = history.sort_values("date")
+            past = history.loc[history["date"] <= when]
+            if past.empty:
+                raise ValueError(
+                    f"La fecha {when.date()} es anterior al inicio del historial de la celda {cell} "
+                    f"({history['date'].min().date()})."
+                )
+            selected = past.iloc[-1]
+        # Proyecta pocas columnas a la vez: los grupos tienen un millón de
+        # filas y decodificar las 210 columnas simultáneamente agota 512 MiB.
+        values = {}
+        columns = parquet.schema_arrow.names
+        for start in range(0, len(columns), 4):
+            table = parquet.read_row_group(int(selected["_group"]), columns=columns[start:start + 4], use_threads=False)
+            values.update(table.slice(int(selected["_row"]), 1).to_pandas().iloc[0].to_dict())
+            del table
+        return pd.Series(values), exact
 
     def _update_calendar(self, row: pd.Series, when: pd.Timestamp) -> None:
         row["month"] = when.month

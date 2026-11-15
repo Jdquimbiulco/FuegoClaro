@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import common_filters, response_meta
 from app.domain.models import FilterSpec
@@ -15,16 +16,9 @@ router = APIRouter(tags=["impacto ambiental"])
 
 @router.get("/protected-areas")
 def protected_areas() -> dict:
-    payload = protected_areas_service.geojson()
-    return json_safe(
-        {
-            "meta": {
-                "module": protected_areas_service.status(),
-                "notes": payload.pop("notes", []),
-            },
-            "data": payload,
-        }
-    )
+    # Build/validate before headers are sent, then stream compact exact features.
+    protected_areas_service._get_catalog()
+    return StreamingResponse(protected_areas_service.stream_response(), media_type="application/json")
 
 
 @router.get("/environmental-alerts")

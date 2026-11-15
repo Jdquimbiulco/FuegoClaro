@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import ijson
 import unicodedata
 from functools import lru_cache
 from pathlib import Path
@@ -65,7 +66,12 @@ def load_canton_features() -> list[dict]:
 
 @lru_cache
 def load_canton_geometries() -> list[tuple[dict, shapely.Geometry]]:
-    return [(feature["properties"], shape(feature["geometry"])) for feature in load_canton_features()]
+    path = cantons_file()
+    if not path.exists():
+        return []
+    with path.open("rb") as handle:
+        return [(feature["properties"], shape(feature["geometry"]))
+                for feature in ijson.items(handle, "features.item", use_float=True)]
 
 
 def canton_id_from_props(props: dict) -> str:
@@ -194,9 +200,7 @@ def regions_payload() -> dict:
             }
         )
     cantons = []
-    for feature in load_canton_features():
-        props = feature["properties"]
-        geom = shape(feature["geometry"])
+    for props, geom in load_canton_geometries():
         point = geom.representative_point()
         canton_id = canton_id_from_props(props)
         if not canton_id:

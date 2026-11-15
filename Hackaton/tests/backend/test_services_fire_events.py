@@ -19,7 +19,8 @@ def _event(event_id: str, severity: str, province: str, frp: float) -> FireEvent
 
 def test_lista_filtra_ordena_y_pagina(monkeypatch):
     events = [_event("EVT-2", "quema_menor", "loja", 20), _event("EVT-1", "alerta_roja", "azuay", 10)]
-    monkeypatch.setattr(fire_events_service, "_events_for", lambda spec: events)
+    monkeypatch.setattr(fire_events_service, "_raw_events_for",
+                        lambda spec, **kwargs: [event.model_dump() for event in events])
     spec = FilterSpec(start_date="2026-08-01", end_date="2026-08-31", region_id="all", sensor="all")
 
     page, total = fire_events_service.list_events(spec, province_ids=["azuay"], limit=1)
@@ -30,7 +31,8 @@ def test_lista_filtra_ordena_y_pagina(monkeypatch):
 
 def test_total_no_cambia_al_paginar(monkeypatch):
     events = [_event("EVT-1", "alerta_roja", "loja", 20), _event("EVT-2", "alerta_media", "loja", 10)]
-    monkeypatch.setattr(fire_events_service, "_events_for", lambda spec: events)
+    monkeypatch.setattr(fire_events_service, "_raw_events_for",
+                        lambda spec, **kwargs: [event.model_dump() for event in events])
     spec = FilterSpec(start_date="2026-08-01", end_date="2026-08-31", region_id="all", sensor="all")
 
     first, total_first = fire_events_service.list_events(spec, limit=1, offset=0)

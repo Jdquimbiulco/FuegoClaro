@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from app.api.deps import common_filters, response_meta
 from app.domain.models import FilterSpec
@@ -73,32 +76,32 @@ def detections(
     page = filtered.iloc[offset : offset + limit]
     page_columns = [column for column in DETECTION_COLUMNS if column in page.columns]
 
-    if format == "geojson":
-        features = []
-        for row in records(page[page_columns]):
-            coordinates = [row["longitude"], row["latitude"]]
-            properties = {key: value for key, value in row.items() if key not in ("longitude", "latitude")}
-            features.append({"type": "Feature", "geometry": {"type": "Point", "coordinates": coordinates}, "properties": properties})
-        data = {"type": "FeatureCollection", "features": features}
-    else:
-        data = records(page[page_columns])
-
     notes = []
     if offset + len(page) < total:
         notes.append("Resultado paginado: usa limit/offset o reduce el periodo para ver más registros.")
-    return json_safe(
-        {
-            "meta": response_meta(store, spec, notes=notes),
-            "pagination": {
-                "total": total,
-                "limit": limit,
-                "offset": offset,
-                "returned": int(len(page)),
-                "truncated": offset + len(page) < total,
-            },
-            "data": data,
-        }
-    )
+    header = json_safe({
+        "meta": response_meta(store, spec, notes=notes),
+        "pagination": {"total": total, "limit": limit, "offset": offset,
+                       "returned": int(len(page)), "truncated": offset + len(page) < total},
+    })
+    # Keep only the requested page, not the filtered historical frame, while
+    # a slow client consumes the response. No map points are dropped.
+    page = page[page_columns].copy()
+    def chunks():
+        yield json.dumps(header, ensure_ascii=False, separators=(",", ":"))[:-1] + ',"data":'
+        yield '{"type":"FeatureCollection","features":[' if format == "geojson" else '['
+        first = True
+        for start in range(0, len(page), 256):
+            batch = records(page.iloc[start:start + 256])
+            if format == "geojson":
+                batch = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [row["longitude"], row["latitude"]]},
+                          "properties": {key: value for key, value in row.items() if key not in ("longitude", "latitude")}}
+                         for row in batch]
+            encoded = json.dumps(batch, ensure_ascii=False, separators=(",", ":"), allow_nan=False)[1:-1]
+            yield ("" if first else ",") + encoded
+            first = False
+        yield ']}}' if format == "geojson" else ']}'
+    return StreamingResponse(chunks(), media_type="application/json")
 
 
 @router.get("/detections/{detection_id}")

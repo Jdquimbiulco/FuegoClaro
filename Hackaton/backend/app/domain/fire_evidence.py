@@ -266,7 +266,7 @@ def annotate_fire_evidence(
         out["evidence_cross_sensor"] = pd.Series(dtype=bool)
         return out
 
-    work = df.copy()
+    work = df.copy(deep=False)  # Only new columns are assigned; original buffers stay shared.
     sensor = _series(work, "sensor", "").astype(str)
     level = _series(work, "confidence_level", "unknown").astype(str).str.lower()
     frp = _numeric(work, "frp").fillna(0.0)
@@ -320,7 +320,8 @@ def annotate_fire_evidence(
             "context_flag": work["context_flag"].to_numpy(),
         }
     )
-    work["evidence_reasons"] = [_reason_text(row) for row in reason_frame.to_dict(orient="records")]
+    work["evidence_reasons"] = [_reason_text(dict(zip(reason_frame.columns, row)))
+                                for row in reason_frame.itertuples(index=False, name=None)]
     return work
 
 

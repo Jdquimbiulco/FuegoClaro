@@ -8,12 +8,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1.router import router as v1_router
 from app.core.config import get_settings
 from app.core.errors import FuegoClaroError
 from app.core.logging import configure_logging
+from app.core.request_budget import RequestBudgetMiddleware
 from app.services.data_store import get_store
 
 configure_logging()
@@ -24,7 +26,7 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     store = get_store()
-    store.refresh(force=True)
+    store.refresh()  # DataStore already loaded once; only reload changed files.
     logger.info(
         "FuegoClaro API iniciada | modo=%s | registros=%s | dataset=%s",
         store.mode,
@@ -52,6 +54,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition", "X-Data-Mode", "X-Dataset-Version"],
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=1)
+app.add_middleware(RequestBudgetMiddleware)
 
 app.include_router(v1_router, prefix="/api/v1")
 

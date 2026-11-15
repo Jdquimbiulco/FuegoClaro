@@ -8,3 +8,4 @@ shapely>=2.0
 scikit-learn>=1.5
 joblib>=1.4
 pyarrow>=17.0
+ijson>=3.3,<4

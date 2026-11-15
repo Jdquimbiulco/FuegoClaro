@@ -39,7 +39,7 @@ def test_predictive_alert_excludes_galapagos(monkeypatch):
     )
     area = {"properties": {"area_id": "snap-1", "name": "Reserva", "category": "PARQUE", "subsystem": "SNAP"}}
     monkeypatch.setattr(environmental_alerts_service.susceptibility_service, "get_map", lambda **_: risk)
-    monkeypatch.setattr(environmental_alerts_service.protected_areas_service, "intersecting_areas", lambda _: [area])
+    monkeypatch.setattr(environmental_alerts_service.protected_areas_service, "intersecting_areas", lambda _, **kwargs: [area])
     monkeypatch.setattr(environmental_alerts_service, "_observed_alerts", lambda _: [])
 
     payload = environmental_alerts_service.list_alerts(FilterSpec(start_date="2026-01-01", end_date="2026-01-02"))

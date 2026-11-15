@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
+from collections import Counter, OrderedDict
 import math
 from pathlib import Path
 from threading import RLock
@@ -18,8 +18,7 @@ from app.services.data_store import apply_filters, get_store
 from app.services.module_registry import ModuleInfo
 from app.utils.geo import regions_payload
 
-_CACHE_SIZE = 16
-_event_cache: OrderedDict[tuple, list[FireEventDTO]] = OrderedDict()
+_CACHE_SIZE = 2
 _raw_event_cache: OrderedDict[tuple, list[dict]] = OrderedDict()
 _event_cache_lock = RLock()
 
@@ -60,7 +59,7 @@ def _raw_events_for(spec: FilterSpec, *, geometry_mode: str) -> list[dict]:
         if cached is not None:
             _raw_event_cache.move_to_end(key)
             return cached
-        frame = apply_filters(get_store().evidence_df, spec)
+        frame = apply_filters(get_store().df, spec)
         events = detect_fire_events(
             frame,
             eps_km=2.0,
@@ -116,41 +115,26 @@ def _province_catalog() -> dict[str, dict]:
     return {province["id"]: province for province in regions_payload()["provinces"]}
 
 
-def _event_members(evidence_by_id: pd.DataFrame, point_ids: list[str]) -> pd.DataFrame:
-    """Obtiene los miembros de un evento por índice, no por escaneo completo.
-
-    Un rango anual puede producir miles de eventos. Filtrar el DataFrame entero
-    para cada uno convertía el enriquecimiento en O(eventos × detecciones) y
-    mantenía bloqueadas las vistas que consumen el dashboard de eventos.
-    """
-    if evidence_by_id.empty or not point_ids:
-        return evidence_by_id.iloc[0:0]
-    return evidence_by_id.reindex(point_ids).dropna(how="all")
-
-
-def _enrich(event: dict, evidence_by_id: pd.DataFrame, catalog: dict[str, dict]) -> FireEventDTO:
-    members = _event_members(evidence_by_id, [str(value) for value in event.get("puntos_ids", [])])
+def _enrich(event: dict, evidence_by_id: dict, catalog: dict[str, dict]) -> FireEventDTO:
+    members = [evidence_by_id[str(value)] for value in event.get("puntos_ids", [])
+               if str(value) in evidence_by_id]
     counts = {level: 0 for level in ("low", "nominal", "high", "unknown")}
-    if not members.empty and "confidence_level" in members:
-        observed = members["confidence_level"].astype(str).str.lower().value_counts()
-        counts.update({level: int(observed.get(level, 0)) for level in counts})
+    for member in members:
+        level = str(member.get("confidence_level")).lower()
+        if level in counts:
+            counts[level] += 1
     dominant = max(counts, key=lambda level: (counts[level], level)) if sum(counts.values()) else None
-    score: int | None = None
-    if not members.empty and "evidence_score" in members:
-        scores = pd.to_numeric(members["evidence_score"], errors="coerce").dropna()
-        score = int(scores.max()) if not scores.empty else None
-    flags: list[str] = []
-    if not members.empty and "context_flag" in members:
-        flags = sorted({str(value) for value in members["context_flag"].dropna() if str(value) != "none"})
+    scores = [member["evidence_score"] for member in members if pd.notna(member.get("evidence_score"))]
+    score = int(max(scores)) if scores else None
+    flags = sorted({str(member["context_flag"]) for member in members
+                    if pd.notna(member.get("context_flag")) and str(member["context_flag"]) != "none"})
 
     province_ids = [value for value in event.get("provincias", []) if value and value != "<NA>"]
     provinces = [catalog[value] for value in province_ids if value in catalog]
     first = provinces[0] if provinces else None
     center = tuple(float(value) for value in event["centro"])
-    canton = None
-    if not members.empty and "canton" in members:
-        values = members["canton"].dropna().astype(str)
-        canton = str(values.mode().iloc[0]) if not values.empty else None
+    cantons = Counter(str(member["canton"]) for member in members if pd.notna(member.get("canton")))
+    canton = min(cantons, key=lambda name: (-cantons[name], name)) if cantons else None
     payload = {
         **event,
         "centro": center,
@@ -168,49 +152,23 @@ def _enrich(event: dict, evidence_by_id: pd.DataFrame, catalog: dict[str, dict])
     return FireEventDTO(**payload)
 
 
-def _events_for(spec: FilterSpec) -> list[FireEventDTO]:
-    key = _cache_key(spec)
-    cached = _event_cache.get(key)
-    if cached is not None:
-        _event_cache.move_to_end(key)
-        return cached
-    try:
-        frame = apply_filters(get_store().evidence_df, spec)
-        raw_events = _raw_events_for(spec, geometry_mode="hull")
-        catalog = _province_catalog()
-        if "id" in frame:
-            evidence_by_id = frame.copy()
-            evidence_by_id["_event_point_id"] = evidence_by_id["id"].astype(str)
-            # Los identificadores FIRMS son únicos. La deduplicación defensiva
-            # evita que una fuente defectuosa vuelva ambigua la indexación.
-            evidence_by_id = evidence_by_id.drop_duplicates("_event_point_id").set_index("_event_point_id", drop=False)
-        else:
-            evidence_by_id = frame.iloc[0:0]
-        events = [_enrich(event, evidence_by_id, catalog) for event in raw_events]
-    except Exception as exc:
-        raise ModuleContractError("clustering", str(exc)) from exc
-    _event_cache[key] = events
-    _event_cache.move_to_end(key)
-    while len(_event_cache) > _CACHE_SIZE:
-        _event_cache.popitem(last=False)
-    return events
-
-
-def _filtered_events(
-    spec: FilterSpec,
-    severity: str | None,
-    province_ids: list[str] | None,
-) -> list[FireEventDTO]:
-    if severity and severity not in ALERT_LEVELS:
+def _enrich_page(events: list[dict]) -> list[FireEventDTO]:
+    if not events:
         return []
-    required_provinces = set(province_ids or [])
-    severity_order = {"alerta_roja": 0, "alerta_media": 1, "quema_menor": 2}
-    selected = [
-        event for event in _events_for(spec)
-        if (severity is None or event.nivel_alerta == severity)
-        and (not required_provinces or required_provinces.intersection(event.provincias))
-    ]
-    return sorted(selected, key=lambda event: (severity_order[event.nivel_alerta], -event.frp_total))
+    # Índice pequeño: solo miembros visibles y columnas del enriquecimiento.
+    evidence = get_store().evidence_df
+    ids = {str(value) for event in events for value in event["puntos_ids"]}
+    columns = [name for name in ("id", "confidence_level", "evidence_score", "context_flag", "canton") if name in evidence]
+    frame = evidence.loc[evidence["id"].astype(str).isin(ids), columns].copy()
+    frame["_event_point_id"] = frame["id"].astype(str)
+    frame = frame.drop_duplicates("_event_point_id").set_index("_event_point_id")
+    indexed = {row[0]: dict(zip(frame.columns, row[1:])) for row in frame.itertuples(name=None)}
+    catalog = _province_catalog()
+    return [_enrich(event, indexed, catalog) for event in events]
+
+
+def _events_for(spec: FilterSpec) -> list[FireEventDTO]:
+    return _enrich_page(_raw_events_for(spec, geometry_mode="hull"))
 
 
 def list_events(
@@ -221,17 +179,17 @@ def list_events(
     limit: int = 500,
     offset: int = 0,
 ) -> tuple[list[FireEventDTO], int]:
-    selected = _filtered_events(spec, severity, province_ids)
-    return selected[offset : offset + limit], len(selected)
+    selected = _select_raw_events(spec, severity, province_ids, geometry_mode="hull")
+    return _enrich_page(selected[offset : offset + limit]), len(selected)
 
 
 def event_detail(event_id: str) -> FireEventDTO:
     store = get_store()
     start, end = store.default_window()
     spec = FilterSpec(start_date=start, end_date=end, region_id="all", sensor="all")
-    for event in _events_for(spec):
-        if event.id_evento == event_id:
-            return event
+    for event in _raw_events_for(spec, geometry_mode="hull"):
+        if event["id_evento"] == event_id:
+            return _enrich_page([event])[0]
     raise NotFoundError(f"Evento no encontrado: {event_id}")
 
 
@@ -259,14 +217,7 @@ def dashboard(
     # Sólo las tarjetas visibles requieren enriquecimiento (cantón, evidencia,
     # área aproximada). El total se conserva en el resumen sin serializar miles
     # de geometrías ni recorrer el DataFrame para cada evento.
-    evidence = apply_filters(store.evidence_df, spec)
-    if "id" in evidence:
-        evidence_by_id = evidence.copy()
-        evidence_by_id["_event_point_id"] = evidence_by_id["id"].astype(str)
-        evidence_by_id = evidence_by_id.drop_duplicates("_event_point_id").set_index("_event_point_id", drop=False)
-    else:
-        evidence_by_id = evidence.iloc[0:0]
-    events = [_enrich(event, evidence_by_id, catalog) for event in raw_events[:event_limit]]
+    events = _enrich_page(raw_events[:event_limit])
 
     historic_start, historic_end = store.date_bounds()
     historical_spec = FilterSpec(

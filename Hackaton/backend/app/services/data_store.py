@@ -234,25 +234,22 @@ def get_store() -> DataStore:
 def apply_filters(df: pd.DataFrame, spec: FilterSpec, *, use_dates: bool = True) -> pd.DataFrame:
     if df.empty:
         return df
-    out = df
+    mask = pd.Series(True, index=df.index)
     if use_dates:
-        out = out[(out["acq_date_local"] >= spec.start_date) & (out["acq_date_local"] <= spec.end_date)]
+        mask &= (df["acq_date_local"] >= spec.start_date) & (df["acq_date_local"] <= spec.end_date)
     if spec.region_id and spec.region_id not in ("all", "ecuador"):
-        out = out[(out["region_id"] == spec.region_id) | (out["province_id"] == spec.region_id)]
+        mask &= (df["region_id"] == spec.region_id) | (df["province_id"] == spec.region_id)
     if spec.canton_id:
-        out = out[out["canton_id"] == spec.canton_id]
+        mask &= df["canton_id"] == spec.canton_id
     if spec.sensor and spec.sensor != "all":
-        out = out[out["sensor"] == spec.sensor]
+        mask &= df["sensor"] == spec.sensor
     if spec.confidence:
-        out = out[out["confidence_level"].isin(spec.confidence)]
+        mask &= df["confidence_level"].isin(spec.confidence)
     if spec.daynight and spec.daynight in ("D", "N"):
-        out = out[out["daynight"] == spec.daynight]
+        mask &= df["daynight"] == spec.daynight
     if spec.min_frp is not None:
-        out = out[out["frp"].fillna(0) >= spec.min_frp]
+        mask &= df["frp"].fillna(0) >= spec.min_frp
     if spec.bbox:
         west, south, east, north = spec.bbox
-        out = out[
-            out["longitude"].between(west, east)
-            & out["latitude"].between(south, north)
-        ]
-    return out
+        mask &= df["longitude"].between(west, east) & df["latitude"].between(south, north)
+    return df.loc[mask]

@@ -11,7 +11,7 @@ from app.services import fire_events_service, protected_areas_service, susceptib
 from app.services.data_store import apply_filters, get_store
 
 _OBSERVED_CACHE: OrderedDict[tuple, list[dict[str, Any]]] = OrderedDict()
-_CACHE_SIZE = 16
+_CACHE_SIZE = 2
 
 
 def _alert_id(kind: str, subject: str, area_id: str) -> str:
@@ -28,7 +28,7 @@ def _predictive_alerts(window_days: int) -> list[dict[str, Any]]:
         # de prioridad alta por la posible señal volcánica.
         if level not in {"Alto", "Extremo"} or props.get("region_id") == "galapagos":
             continue
-        for area in protected_areas_service.intersecting_areas(feature["geometry"]):
+        for area in protected_areas_service.intersecting_areas(feature["geometry"], include_geometry=False):
             area_props = area["properties"]
             alerts.append(
                 {
@@ -48,7 +48,7 @@ def _predictive_alerts(window_days: int) -> list[dict[str, Any]]:
 def _observed_cache_key(spec: FilterSpec) -> tuple:
     path = get_store().meta.path
     mtime = Path(path).stat().st_mtime if path and Path(path).exists() else None
-    return (mtime, spec.start_date, spec.end_date, spec.region_id, spec.sensor, tuple(spec.confidence), spec.daynight, spec.min_frp, spec.bbox)
+    return (mtime, spec.start_date, spec.end_date, spec.region_id, spec.canton_id, spec.sensor, tuple(spec.confidence), spec.daynight, spec.min_frp, spec.bbox)
 
 
 def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
@@ -60,7 +60,9 @@ def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
         province_ids=None,
         geometry_mode="bbox",
     )
-    evidence = apply_filters(get_store().evidence_df, spec)
+    ids = {str(value) for event in events for value in event["puntos_ids"]}
+    source = get_store().evidence_df
+    evidence = source.loc[source["id"].astype(str).isin(ids), ["id", "latitude", "longitude"]]
     if evidence.empty:
         return []
     points = evidence.set_index(evidence["id"].astype(str), drop=False)
@@ -73,7 +75,7 @@ def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
             point = points.loc[point_id]
             # El cruce se hace con cada punto real, no con el hull del evento.
             geometry = {"type": "Point", "coordinates": [float(point["longitude"]), float(point["latitude"])]}
-            for area in protected_areas_service.intersecting_areas(geometry):
+            for area in protected_areas_service.intersecting_areas(geometry, include_geometry=False):
                 area_props = area["properties"]
                 identifier = _alert_id("observed", event["id_evento"], str(area_props["area_id"]))
                 if identifier in emitted:
