@@ -92,48 +92,49 @@ def _neighbour_pairs(
     lat_cell = np.floor(lat / eps_deg).astype("int64")
     lon_cell = np.floor(lon / eps_deg).astype("int64")
 
-    keys = pd.DataFrame({"lat_cell": lat_cell, "lon_cell": lon_cell})
-    idx = np.arange(len(lat))
+    keys = pd.DataFrame(
+        {"row": np.arange(len(lat)), "lat_cell": lat_cell, "lon_cell": lon_cell, "day_ord": day_ord}
+    )
     left_rows: list[np.ndarray] = []
     right_rows: list[np.ndarray] = []
 
+    # Se usa solamente la mitad canónica de los desplazamientos. Antes se
+    # formaban pares de todos los días de una misma celda espacial y recién
+    # después se descartaban; en una ventana anual eso podía crecer a O(n²).
+    # Incluir day_ord en la llave limita los candidatos a la ventana temporal
+    # solicitada antes de calcular distancia o crear la lista de adyacencia.
     for dlat in (-1, 0, 1):
         for dlon in (-1, 0, 1):
-            probe = pd.DataFrame(
-                {
-                    "row": idx,
-                    "lat_cell": lat_cell + dlat,
-                    "lon_cell": lon_cell + dlon,
-                }
-            )
-            if dlat == 0 and dlon == 0:
-                grouped = probe.groupby(["lat_cell", "lon_cell"], sort=False)["row"].apply(np.asarray)
-                for rows in grouped:
-                    if len(rows) > 1:
-                        left_rows.append(np.repeat(rows, len(rows)))
-                        right_rows.append(np.tile(rows, len(rows)))
-                continue
-            merged = probe.merge(keys.reset_index(names="row2"), on=["lat_cell", "lon_cell"], how="inner")
-            if merged.empty:
-                continue
-            left_rows.append(merged["row"].to_numpy())
-            right_rows.append(merged["row2"].to_numpy())
+            for dday in range(-eps_days, eps_days + 1):
+                # La comparación lexicográfica deja cada par espacial-temporal
+                # en un único desplazamiento; el origen se trata aparte.
+                if (dlat, dlon, dday) < (0, 0, 0):
+                    continue
+                probe = keys[["row", "lat_cell", "lon_cell", "day_ord"]].copy()
+                probe["lat_cell"] += dlat
+                probe["lon_cell"] += dlon
+                probe["day_ord"] += dday
+                merged = probe.merge(
+                    keys.rename(columns={"row": "row2"}),
+                    on=["lat_cell", "lon_cell", "day_ord"],
+                    how="inner",
+                )
+                if merged.empty:
+                    continue
+                i_values = merged["row"].to_numpy()
+                j_values = merged["row2"].to_numpy()
+                if (dlat, dlon, dday) == (0, 0, 0):
+                    keep = i_values < j_values
+                    i_values, j_values = i_values[keep], j_values[keep]
+                if i_values.size:
+                    left_rows.append(i_values)
+                    right_rows.append(j_values)
 
     if not left_rows:
         return np.empty(0, dtype=np.int64), np.empty(0, dtype=np.int64)
 
     i = np.concatenate(left_rows)
     j = np.concatenate(right_rows)
-    keep = i < j
-    i, j = i[keep], j[keep]
-    if i.size == 0:
-        return i, j
-
-    keep = np.abs(day_ord[i] - day_ord[j]) <= eps_days
-    i, j = i[keep], j[keep]
-    if i.size == 0:
-        return i, j
-
     dist = _haversine_km(lat[i], lon[i], lat[j], lon[j])
     keep = dist <= eps_km
     return i[keep], j[keep]
@@ -290,6 +291,7 @@ def detect_fire_events(
     min_points: int = 1,
     flare_radius_km: float = DEFAULT_FLARE_RADIUS_KM,
     flare_sources: list[dict] | None = None,
+    geometry_mode: str = "hull",
 ) -> list[dict]:
     """Agrupa detecciones FIRMS en eventos de incendio y clasifica su alerta.
 
@@ -318,6 +320,12 @@ def detect_fire_events(
     thermal = _thermal_contrast(df).to_numpy()
     dates = pd.to_datetime(_date_column(df), errors="coerce")
     day_ord = dates.map(lambda value: value.toordinal() if pd.notna(value) else -10_000).to_numpy().astype(np.int64)
+    # Se consumen estos valores por evento. Prepararlos una sola vez evita
+    # miles de operaciones pandas cuando el período contiene muchos focos.
+    date_labels = dates.dt.strftime("%Y-%m-%d").fillna("").to_numpy()
+    point_id_values = df["id"].astype(str).to_numpy() if "id" in df else np.arange(len(df)).astype(str)
+    sensor_values = df["sensor"].astype(str).to_numpy() if "sensor" in df else np.full(len(df), "", dtype=object)
+    province_values = df["province_id"].astype(str).to_numpy() if "province_id" in df else np.full(len(df), "", dtype=object)
 
     sources = flare_sources if flare_sources is not None else load_flare_sources()
     flare_mask = _flare_mask(lat, lon, sources, flare_radius_km)
@@ -336,15 +344,12 @@ def detect_fire_events(
             continue
         members = np.flatnonzero(labels == cluster_id)
         m_lat, m_lon, m_frp = lat[members], lon[members], frp[members]
-        m_dates = dates.iloc[members].dropna()
-        start = str(m_dates.min().date()) if not m_dates.empty else None
-        end = str(m_dates.max().date()) if not m_dates.empty else None
-        days = sorted(set(m_dates.dt.strftime("%Y-%m-%d")))
-        point_ids = (
-            df["id"].astype(str).iloc[members].tolist()
-            if "id" in df
-            else [str(value) for value in members.tolist()]
-        )
+        member_dates = date_labels[members]
+        valid_dates = member_dates[member_dates != ""]
+        start = str(valid_dates.min()) if valid_dates.size else None
+        end = str(valid_dates.max()) if valid_dates.size else None
+        days = sorted(set(valid_dates.tolist()))
+        point_ids = point_id_values[members].tolist()
         # El ID no puede depender del orden del DataFrame ni de la paginación:
         # un mismo conjunto de detecciones debe poder consultarse por detalle
         # después de haber sido listado con filtros.
@@ -354,15 +359,18 @@ def detect_fire_events(
             "frp_total": float(np.sum(m_frp)),
             "frp_max": float(np.max(m_frp)),
             "puntos_count": int(members.size),
-            "geometria": _convex_hull_geojson(m_lat, m_lon),
+        # El feed y las alertas sólo usan centro y miembros. Evitar miles de
+        # hulls de Shapely mantiene esa consulta interactiva; los endpoints
+        # GeoJSON conservan el hull preciso por defecto.
+        "geometria": _bbox_geojson(m_lat, m_lon) if geometry_mode == "bbox" else _convex_hull_geojson(m_lat, m_lon),
             "centro": [float(m_lat.mean()), float(m_lon.mean())],
             "inicio": start,
             "fin": end,
             "dias": days,
             "diurnas": int(np.sum(daynight[members] == "D")),
             "nocturnas": int(np.sum(daynight[members] == "N")),
-            "sensores": sorted(set(df["sensor"].astype(str).iloc[members])) if "sensor" in df else [],
-            "provincias": sorted(set(df["province_id"].astype(str).iloc[members])) if "province_id" in df else [],
+            "sensores": sorted(set(sensor_values[members])),
+            "provincias": sorted(set(province_values[members])),
             "puntos_ids": point_ids,
             "frp_medio": float(np.mean(m_frp)),
             "contraste_medio_k": float(np.mean(thermal[members])),

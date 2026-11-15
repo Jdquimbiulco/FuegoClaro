@@ -402,7 +402,7 @@ export default function DashboardPage() {
         /* VISTA AVANZADA / EXPERTOS */
         <>
           {/* Banner de Contexto Científico para el Modo Experto */}
-          <div className="mb-4 rounded-xl border border-sky-400/30 bg-gradient-to-r from-sky-500/15 via-ink-850 to-ink-900 p-4 shadow-panel">
+          <div className="dashboard-science-banner mb-4 rounded-xl border border-sky-400/30 bg-gradient-to-r from-sky-500/15 via-ink-850 to-ink-900 p-4 shadow-panel">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-400/40 bg-sky-500/20 text-sky-300 shadow-sm">

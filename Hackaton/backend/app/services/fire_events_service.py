@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 import math
 from pathlib import Path
+from threading import RLock
 
 import pandas as pd
 
@@ -19,6 +20,8 @@ from app.utils.geo import regions_payload
 
 _CACHE_SIZE = 16
 _event_cache: OrderedDict[tuple, list[FireEventDTO]] = OrderedDict()
+_raw_event_cache: OrderedDict[tuple, list[dict]] = OrderedDict()
+_event_cache_lock = RLock()
 
 
 def module_info() -> ModuleInfo:
@@ -45,6 +48,52 @@ def _cache_key(spec: FilterSpec) -> tuple:
     )
 
 
+def _raw_events_for(spec: FilterSpec, *, geometry_mode: str) -> list[dict]:
+    """Agrupa una sola vez las detecciones para consumidores concurrentes.
+
+    El feed y las alertas ambientales se solicitan al mismo tiempo desde el
+    mapa. Compartir el resultado evita ejecutar dos ST-DBSCAN idénticos.
+    """
+    key = (*_cache_key(spec), geometry_mode)
+    with _event_cache_lock:
+        cached = _raw_event_cache.get(key)
+        if cached is not None:
+            _raw_event_cache.move_to_end(key)
+            return cached
+        frame = apply_filters(get_store().evidence_df, spec)
+        events = detect_fire_events(
+            frame,
+            eps_km=2.0,
+            eps_days=2,
+            min_points=1,
+            geometry_mode=geometry_mode,
+        )
+        _raw_event_cache[key] = events
+        _raw_event_cache.move_to_end(key)
+        while len(_raw_event_cache) > _CACHE_SIZE:
+            _raw_event_cache.popitem(last=False)
+        return events
+
+
+def _select_raw_events(
+    spec: FilterSpec,
+    severity: str | None,
+    province_ids: list[str] | None,
+    *,
+    geometry_mode: str,
+) -> list[dict]:
+    if severity and severity not in ALERT_LEVELS:
+        return []
+    required_provinces = set(province_ids or [])
+    severity_order = {"alerta_roja": 0, "alerta_media": 1, "quema_menor": 2}
+    selected = [
+        event for event in _raw_events_for(spec, geometry_mode=geometry_mode)
+        if (severity is None or event["nivel_alerta"] == severity)
+        and (not required_provinces or required_provinces.intersection(event["provincias"]))
+    ]
+    return sorted(selected, key=lambda event: (severity_order[event["nivel_alerta"]], -event["frp_total"]))
+
+
 def _hull_area_km2(geometry: dict, latitude: float) -> float | None:
     """Área aproximada del hull en km²; explícitamente no es área quemada."""
     try:
@@ -67,14 +116,20 @@ def _province_catalog() -> dict[str, dict]:
     return {province["id"]: province for province in regions_payload()["provinces"]}
 
 
-def _event_members(frame: pd.DataFrame, point_ids: list[str]) -> pd.DataFrame:
-    if frame.empty or "id" not in frame:
-        return frame.iloc[0:0]
-    return frame[frame["id"].astype(str).isin(set(point_ids))]
+def _event_members(evidence_by_id: pd.DataFrame, point_ids: list[str]) -> pd.DataFrame:
+    """Obtiene los miembros de un evento por índice, no por escaneo completo.
+
+    Un rango anual puede producir miles de eventos. Filtrar el DataFrame entero
+    para cada uno convertía el enriquecimiento en O(eventos × detecciones) y
+    mantenía bloqueadas las vistas que consumen el dashboard de eventos.
+    """
+    if evidence_by_id.empty or not point_ids:
+        return evidence_by_id.iloc[0:0]
+    return evidence_by_id.reindex(point_ids).dropna(how="all")
 
 
-def _enrich(event: dict, evidence: pd.DataFrame, catalog: dict[str, dict]) -> FireEventDTO:
-    members = _event_members(evidence, [str(value) for value in event.get("puntos_ids", [])])
+def _enrich(event: dict, evidence_by_id: pd.DataFrame, catalog: dict[str, dict]) -> FireEventDTO:
+    members = _event_members(evidence_by_id, [str(value) for value in event.get("puntos_ids", [])])
     counts = {level: 0 for level in ("low", "nominal", "high", "unknown")}
     if not members.empty and "confidence_level" in members:
         observed = members["confidence_level"].astype(str).str.lower().value_counts()
@@ -119,12 +174,19 @@ def _events_for(spec: FilterSpec) -> list[FireEventDTO]:
     if cached is not None:
         _event_cache.move_to_end(key)
         return cached
-    store = get_store()
     try:
-        frame = apply_filters(store.evidence_df, spec)
-        raw_events = detect_fire_events(frame, eps_km=2.0, eps_days=2, min_points=1)
+        frame = apply_filters(get_store().evidence_df, spec)
+        raw_events = _raw_events_for(spec, geometry_mode="hull")
         catalog = _province_catalog()
-        events = [_enrich(event, frame, catalog) for event in raw_events]
+        if "id" in frame:
+            evidence_by_id = frame.copy()
+            evidence_by_id["_event_point_id"] = evidence_by_id["id"].astype(str)
+            # Los identificadores FIRMS son únicos. La deduplicación defensiva
+            # evita que una fuente defectuosa vuelva ambigua la indexación.
+            evidence_by_id = evidence_by_id.drop_duplicates("_event_point_id").set_index("_event_point_id", drop=False)
+        else:
+            evidence_by_id = frame.iloc[0:0]
+        events = [_enrich(event, evidence_by_id, catalog) for event in raw_events]
     except Exception as exc:
         raise ModuleContractError("clustering", str(exc)) from exc
     _event_cache[key] = events
@@ -142,14 +204,12 @@ def _filtered_events(
     if severity and severity not in ALERT_LEVELS:
         return []
     required_provinces = set(province_ids or [])
-    events = _events_for(spec)
+    severity_order = {"alerta_roja": 0, "alerta_media": 1, "quema_menor": 2}
     selected = [
-        event
-        for event in events
+        event for event in _events_for(spec)
         if (severity is None or event.nivel_alerta == severity)
         and (not required_provinces or required_provinces.intersection(event.provincias))
     ]
-    severity_order = {"alerta_roja": 0, "alerta_media": 1, "quema_menor": 2}
     return sorted(selected, key=lambda event: (severity_order[event.nivel_alerta], -event.frp_total))
 
 
@@ -180,20 +240,33 @@ def dashboard(
     *,
     granularity: str = "month",
     province_ids: list[str] | None = None,
+    event_limit: int = 500,
 ) -> FireDashboardDTO:
-    events = _filtered_events(spec, None, province_ids)
+    raw_events = _select_raw_events(spec, None, province_ids, geometry_mode="bbox")
     store = get_store()
     filtered_detections = apply_filters(store.df, spec)
     by_province: dict[str, int] = {}
     catalog = _province_catalog()
-    for event in events:
-        for province_id in event.provincias:
+    for event in raw_events:
+        for province_id in event["provincias"]:
             by_province[province_id] = by_province.get(province_id, 0) + 1
     province_rows = [
         {"id": province_id, "name": str(catalog.get(province_id, {}).get("name", province_id)), "count": count}
         for province_id, count in by_province.items()
     ]
     province_rows.sort(key=lambda item: (-int(item["count"]), str(item["name"])))
+
+    # Sólo las tarjetas visibles requieren enriquecimiento (cantón, evidencia,
+    # área aproximada). El total se conserva en el resumen sin serializar miles
+    # de geometrías ni recorrer el DataFrame para cada evento.
+    evidence = apply_filters(store.evidence_df, spec)
+    if "id" in evidence:
+        evidence_by_id = evidence.copy()
+        evidence_by_id["_event_point_id"] = evidence_by_id["id"].astype(str)
+        evidence_by_id = evidence_by_id.drop_duplicates("_event_point_id").set_index("_event_point_id", drop=False)
+    else:
+        evidence_by_id = evidence.iloc[0:0]
+    events = [_enrich(event, evidence_by_id, catalog) for event in raw_events[:event_limit]]
 
     historic_start, historic_end = store.date_bounds()
     historical_spec = FilterSpec(
@@ -222,8 +295,8 @@ def dashboard(
         period={"start": spec.start_date, "end": spec.end_date},
         summary={
             "detections": int(len(filtered_detections)),
-            "events": len(events),
-            "critical_events": sum(event.nivel_alerta == "alerta_roja" for event in events),
+            "events": len(raw_events),
+            "critical_events": sum(event["nivel_alerta"] == "alerta_roja" for event in raw_events),
             "confirmed_critical": None,
             "extreme_risk_cantons": None,
             "frp_total": round(float(frp.sum()), 2) if not frp.empty else None,

@@ -38,7 +38,12 @@ def fire_events(
 ) -> dict:
     provinces = _province_ids(province_ids)
     if format == "dashboard":
-        dashboard = fire_events_service.dashboard(spec, granularity=granularity, province_ids=provinces)
+        dashboard = fire_events_service.dashboard(
+            spec,
+            granularity=granularity,
+            province_ids=provinces,
+            event_limit=limit,
+        )
         return json_safe({"meta": _meta(spec, province_ids=provinces, notes=dashboard.notes), "data": dashboard.model_dump()})
 
     events, total = fire_events_service.list_events(

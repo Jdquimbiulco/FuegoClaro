@@ -116,7 +116,7 @@ export function Notice({
     neutral: 'border-ink-700 bg-ink-800/60 text-slate-200',
   }
   return (
-    <div className={`flex gap-3 rounded-xl border p-3 text-xs leading-relaxed ${styles[tone]}`}>
+    <div className={`notice notice-${tone} flex gap-3 rounded-xl border p-3 text-xs leading-relaxed ${styles[tone]}`}>
       <Icon size={16} className="mt-0.5 shrink-0 opacity-80" />
       <div>
         {title && <p className="mb-1 font-semibold">{title}</p>}

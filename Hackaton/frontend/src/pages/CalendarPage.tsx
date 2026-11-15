@@ -28,10 +28,11 @@ import { useFilters } from '../context/FiltersContext'
 import { useApi } from '../hooks/useApi'
 import { SENSOR_COLORS } from '../lib/constants'
 import { addMonths, formatDate, formatMonth, formatNumber, formatPercent } from '../lib/format'
-import { exportUrl } from '../services/api'
-import type { ApiEnvelope, CalendarData, CalendarDay, CalendarYearData } from '../types/api'
+import { exportUrl, withQuery } from '../services/api'
+import type { ApiEnvelope, CalendarData, CalendarDay, Timeseries } from '../types/api'
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 
 function monthStart(month: string): string {
   return `${month}-01`
@@ -55,9 +56,28 @@ export default function CalendarPage() {
     apiPath('/calendar', { month }),
   )
   const calendar = calendarState.data?.data
-  const year = Number(month.slice(0, 4))
-  const calendarYearState = useApi<ApiEnvelope<CalendarYearData>>(apiPath('/calendar', { year }))
-  const calendarYear = calendarYearState.data?.data
+  // La estacionalidad sólo requiere conteos mensuales. No debe ejecutar el
+  // agrupamiento espacial de eventos, que es reservado para el feed del mapa.
+  const seasonalityState = useApi<ApiEnvelope<Timeseries>>(
+    withQuery('/stats/timeseries', {
+      start_date: meta.date_range.start ?? filters.start,
+      end_date: meta.date_range.end ?? filters.end,
+      region_id: filters.region,
+      canton_id: filters.canton,
+      sensor: filters.sensor,
+      confidence: filters.confidence,
+      province_ids: filters.provinces,
+      granularity: 'month',
+    }),
+  )
+  const seasonality = useMemo(() => {
+    const values = new Map<string, number>()
+    for (const item of seasonalityState.data?.data.series ?? []) {
+      values.set(item.period, (values.get(item.period) ?? 0) + item.count)
+    }
+    const years = [...new Set([...values.keys()].map((period) => period.slice(0, 4)))].sort()
+    return { values, years, max: Math.max(1, ...values.values()) }
+  }, [seasonalityState.data])
 
   const minMonth = (meta.date_range.start ?? month).slice(0, 7)
   const maxMonth = (meta.date_range.end ?? month).slice(0, 7)
@@ -141,7 +161,7 @@ export default function CalendarPage() {
           onClick={() => setCalendarMode('months')}
           className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-semibold transition ${calendarMode === 'months' ? 'bg-ember-500/15 text-ember-200' : 'text-slateish hover:text-white'}`}
         >
-          Estacionalidad por mes
+          Estacionalidad anual
         </button>
       </div>
 
@@ -184,23 +204,30 @@ export default function CalendarPage() {
             <Card className="mb-4">
               <SectionHeading
                 eyebrow="Estacionalidad"
-                title={`Actividad mensual · ${year}`}
-                description="Selecciona un mes para abrir su detalle diario. La intensidad es relativa al mes más activo del año filtrado."
+                title="Actividad térmica por año y mes"
+                description="Lectura histórica por año. Selecciona una celda para abrir el detalle diario de ese mes; la intensidad es relativa a toda la serie filtrada."
               />
-              {calendarYearState.loading && !calendarYear ? <LoadingBlock compact /> : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                  {calendarYear?.months.map((item) => (
-                    <button
-                      key={item.month}
-                      type="button"
-                      onClick={() => { setMonth(item.month); setSelected(null); setCalendarMode('days') }}
-                      className={`calendar-cell int-${item.intensity} focus-ring min-h-[92px]`}
-                    >
-                      <span className="text-xs font-semibold capitalize text-slate-100">{formatMonth(item.month).replace(` de ${year}`, '')}</span>
-                      <span className="num text-lg font-bold text-white">{formatNumber(item.total)}</span>
-                      <span className="text-[10px] text-slateish">detecciones</span>
-                    </button>
-                  ))}
+              {seasonalityState.loading && !seasonalityState.data ? <LoadingBlock compact /> : seasonality.years.length === 0 ? <EmptyState title="Sin histórico para estos filtros" /> : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[650px] border-separate border-spacing-1 text-center text-xs">
+                    <caption className="sr-only">Conteo mensual de detecciones por año</caption>
+                    <thead><tr><th scope="col" className="text-slateish">Año</th>{MONTHS.map((label) => <th scope="col" key={label} className="pb-2 font-medium text-slateish">{label}</th>)}</tr></thead>
+                    <tbody>{seasonality.years.map((seasonYear) => <tr key={seasonYear}>
+                      <th scope="row" className="pr-2 font-medium text-slate-200">{seasonYear}</th>
+                      {MONTHS.map((label, index) => {
+                        const period = `${seasonYear}-${String(index + 1).padStart(2, '0')}`
+                        const value = seasonality.values.get(period)
+                        const intensity = value ? 0.18 + 0.72 * Math.sqrt(value / seasonality.max) : 0
+                        return <td key={period}><button type="button" disabled={value === undefined}
+                          className="focus-ring h-10 w-full rounded-md border border-ink-700 text-[10px] font-semibold text-white transition hover:border-ember-300 disabled:cursor-default disabled:opacity-35"
+                          style={{ backgroundColor: value === undefined || value === 0 ? undefined : `rgba(245, 100, 10, ${intensity})` }}
+                          title={`${label} ${seasonYear}: ${value === undefined ? 'Sin cobertura' : `${formatNumber(value)} detecciones`}`}
+                          onClick={() => { setMonth(period); setSelected(null); setCalendarMode('days') }}>
+                          {value === undefined ? '—' : formatNumber(value)}
+                        </button></td>
+                      })}
+                    </tr>)}</tbody>
+                  </table>
                 </div>
               )}
             </Card>
