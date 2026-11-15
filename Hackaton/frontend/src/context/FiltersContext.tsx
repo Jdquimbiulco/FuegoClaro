@@ -56,6 +56,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       region: searchParams.get('region') || 'all',
       sensor: (searchParams.get('sensor') as FilterState['sensor']) || 'all',
       confidence: searchParams.get('confidence') || '',
+      provinces: searchParams.get('provinces') || '',
     }),
     [meta.default_window.end, meta.default_window.start, searchParams],
   )
@@ -95,6 +96,8 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       params.set('sensor', next.sensor)
       if (next.confidence) params.set('confidence', next.confidence)
       else params.delete('confidence')
+      if (next.provinces) params.set('provinces', next.provinces)
+      else params.delete('provinces')
       setSearchParams(params, { replace: true })
     },
     [searchParams, setSearchParams],
@@ -126,6 +129,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       region: 'all',
       sensor: 'all',
       confidence: '',
+      provinces: '',
     })
   }, [meta.default_window.end, meta.default_window.start, write])
 
@@ -143,6 +147,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
     if (filters.region !== 'all') count += 1
     if (filters.sensor !== 'all') count += 1
     if (filters.confidence) count += 1
+    if (filters.provinces) count += 1
     if (
       filters.start !== meta.default_window.start ||
       filters.end !== meta.default_window.end

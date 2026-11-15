@@ -32,28 +32,44 @@ import type { ProvenanceResponse } from '../types/api'
 
 const SIMPLE_STEPS = [
   {
-    title: 'Descargamos',
-    detail: 'Pedimos a NASA FIRMS las detecciones del territorio ecuatoriano y las guardamos tal como llegan.',
+    title: 'Seleccionar el contexto de la consulta',
+    detail: 'El análisis comienza con los filtros de la página: periodo, territorio, sensor y calidad de las detecciones. Estos criterios delimitan los registros que consultan las vistas analíticas. El selector Público General muestra una lectura resumida; Modo Experto añade desgloses y métricas técnicas sobre esos datos.',
+    result: 'Antes de interpretar un indicador, revisa el periodo, la región y los filtros activos. El perfil cambia la presentación, no la fuente de los registros.',
   },
   {
-    title: 'Limpiamos',
-    detail: 'Quitamos coordenadas inválidas, fechas imposibles y duplicados. No inventamos ni rellenamos datos.',
+    title: 'Dashboard: conocer el panorama del periodo',
+    detail: 'El panel reúne el total de detecciones, su evolución mensual y su distribución territorial. Calculamos estos valores agrupando los registros por fecha local, provincia, región y sensor. En Modo Experto se añaden la distribución de confianza, las mediciones de FRP y las observaciones recientes. Seleccionar una provincia o región permite enfocar el análisis en ese territorio.',
+    result: 'Puedes reconocer cuándo se concentran las detecciones y qué territorios aportan más registros al periodo consultado.',
   },
   {
-    title: 'Ubicamos',
-    detail: 'Asignamos provincia y región (Costa, Sierra, Amazonía, Galápagos) usando los límites geográficos.',
+    title: 'Mapa: localizar las observaciones',
+    detail: 'Situamos cada detección mediante sus coordenadas y mostramos las geometrías provinciales como referencia. La consulta aplica los filtros activos y carga hasta 20.000 registros, ordenados desde los más recientes. Los puntos permiten explorar la distribución espacial; el modo experto incorpora información técnica y la descarga de datos.',
+    result: 'Puedes ubicar las observaciones. Si la consulta supera el límite de carga, los puntos visibles no representan todos los registros del periodo.',
   },
   {
-    title: 'Comparamos',
-    detail: 'Calculamos conteos por día, región y sensor; series, calendario y diferencias entre MODIS y VIIRS.',
+    title: 'Calendario: revisar la actividad día por día',
+    detail: 'El calendario consulta el mes que seleccionas y agrupa las detecciones por día local. El color de cada celda representa su cantidad relativa dentro del mes. Al seleccionar una fecha aparece el detalle del día; en Modo Experto también se distingue el aporte de MODIS y VIIRS. El promedio mensual divide el total entre todos los días del mes.',
+    result: 'Puedes encontrar los días con mayor conteo y examinarlos individualmente. Una celda sin registros no permite determinar por sí sola la causa de esa ausencia.',
   },
   {
-    title: 'Detectamos anomalías',
-    detail: 'Comparamos cada día con la misma época de años anteriores para ver si el conteo fue inusualmente alto o bajo.',
+    title: 'Comparador: contrastar MODIS y VIIRS',
+    detail: 'Aplicamos el mismo periodo y territorio a ambos sensores y presentamos sus conteos, participación y días con detecciones. La serie permite comparar por día, semana o mes. El modo experto añade información de confianza, plataformas y distribución regional. Como cada sensor tiene distinta resolución y sensibilidad, interpretamos las diferencias como diferencias de detección.',
+    result: 'Puedes comprobar cuánto aporta cada sensor y cómo varía su comportamiento en el tiempo, sin convertir la proporción entre conteos en una proporción de superficie afectada.',
   },
   {
-    title: 'Explicamos',
-    detail: 'Generamos hallazgos con plantillas fijas. No usamos IA generativa para inventar cifras ni conclusiones.',
+    title: 'Hallazgos: explicar los resultados calculados',
+    detail: 'Esta sección combina el total de detecciones, el número de hallazgos, el periodo analizado y una gráfica mensual. Las tarjetas se redactan mediante plantillas que incorporan los cálculos del backend: volumen, diferencias entre sensores, picos temporales y otros patrones disponibles. La vista resumida facilita la lectura y la experta permite revisar más detalle y descargar evidencia.',
+    result: 'Puedes relacionar las explicaciones con las cifras del periodo seleccionado. Cuando los filtros no devuelven datos, la página muestra un estado sin hallazgos.',
+  },
+  {
+    title: 'Incendios: consultar el centro de mando',
+    detail: 'El centro de mando reúne indicadores, un feed ordenado por severidad, comparación MODIS–VIIRS, distribución provincial y un mapa de calor mensual. Los filtros permiten combinar fechas, varias provincias, sensor y confianza. Cada tarjeta incluye ubicación, FRP, cantidad de focos y un botón para enfocar el evento en el mapa.',
+    result: 'Si el servicio de eventos aún no está disponible, la pantalla identifica sus ejemplos como datos de demostración. Los indicadores de confirmación y riesgo cantonal quedan sin datos hasta recibir las fuentes correspondientes.',
+  },
+  {
+    title: 'Metodología: comprobar cómo se obtuvieron las cifras',
+    detail: 'En esta página reunimos las fuentes de NASA FIRMS, las diferencias entre sensores y los criterios usados para interpretar los resultados. El anexo técnico detalla la descarga, normalización, asignación geográfica, validación y análisis estadístico. También permite consultar la versión, el archivo y la huella del conjunto de datos cuando el manifiesto está disponible.',
+    result: 'Puedes pasar de lo que ves en una pantalla a la explicación del cálculo y a la procedencia de los datos utilizados.',
   },
 ]
 
@@ -163,7 +179,7 @@ export default function MethodologyPage() {
 
       <Card className="mb-4 border-ember-400/20 bg-ember-500/[0.04]">
         <SectionHeading
-          eyebrow="La idea en 30 segundos"
+          eyebrow="Nuestro método"
           title="Qué hace FuegoClaro"
           description="Tomamos datos públicos de satélite, los ordenamos y los convertimos en una lectura fácil de explorar. No creamos datos ni conclusiones que no estén en la fuente."
         />
@@ -172,7 +188,7 @@ export default function MethodologyPage() {
             {
               icon: Satellite,
               title: '1. Recibimos',
-              detail: 'NASA publica detecciones de calor de dos satélites. FuegoClaro las descarga para Ecuador.',
+              detail: 'NASA publica detecciones de calor de los sensores MODIS y VIIRS. FuegoClaro las descarga para Ecuador.',
             },
             {
               icon: Layers,
@@ -196,13 +212,32 @@ export default function MethodologyPage() {
             </div>
           ))}
         </div>
-        <div className="mt-3">
-          <Notice tone="warning" title="La frase más importante" icon={ShieldCheck}>
-            Un punto en el mapa significa “el satélite vio una señal de calor en ese píxel”, no “hay un incendio
-            confirmado”. Tampoco mide el área quemada ni la gravedad del fuego.
-          </Notice>
-        </div>
       </Card>
+
+      <Card className="mb-4">
+        <SectionHeading
+          eyebrow="Proceso"
+          title="Cómo funciona cada sección de la página"
+          description="Sigue este recorrido para entender qué muestra cada sección, cómo se obtienen sus resultados y qué puedes hacer con ellos."
+        />
+        <ol className="space-y-3">
+          {SIMPLE_STEPS.map((step, index) => (
+            <li key={step.title} className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-4 sm:p-5">
+              <div className="flex items-center gap-3">
+                <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-ember-400/30 bg-ember-500/10 text-xs font-semibold text-ember-200">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3 className="text-sm font-semibold text-white">{step.title}</h3>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slateish">{step.detail}</p>
+              <p className="mt-3 border-t border-ink-700/60 pt-3 text-sm leading-relaxed text-slate-200">
+                <span className="font-semibold text-ember-200">Resultado: </span>{step.result}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Card>
+
 
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
@@ -228,7 +263,7 @@ export default function MethodologyPage() {
 
         <Card>
           <SectionHeading
-            eyebrow="Los dos satélites"
+            eyebrow="Los sensores"
             title="MODIS y VIIRS ven diferente"
             description="Los dos detectan calor, pero no con el mismo nivel de detalle. Por eso sus números no se leen como equivalentes."
           />
@@ -348,26 +383,6 @@ export default function MethodologyPage() {
         </Card>
       </div>
 
-      <Card className="mt-4">
-        <SectionHeading
-          eyebrow="Proceso"
-          title="De los satélites al tablero, en simple"
-          description="Cada etapa es explícita y reproducible. No se aplican modelos de lenguaje ni correcciones inventadas."
-        />
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {SIMPLE_STEPS.map((step, index) => (
-            <div key={step.title} className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
-              <div className="flex items-center gap-2">
-                <span className="num flex h-5 w-5 items-center justify-center rounded-md border border-ember-400/30 bg-ember-500/10 text-[9px] font-semibold text-ember-200">
-                  {String(index + 1).padStart(2, '0')}
-                </span>
-                <p className="text-[11px] font-semibold text-white">{step.title}</p>
-              </div>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-slateish">{step.detail}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <Notice tone="critical" title="Lo que este tablero no dice" icon={ShieldCheck}>
