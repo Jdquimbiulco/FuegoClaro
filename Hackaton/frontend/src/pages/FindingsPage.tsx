@@ -10,8 +10,7 @@ import {
   Map as MapIcon,
   Sparkles,
 } from 'lucide-react'
-import { useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { TimeSeriesChart } from '../components/charts/Charts'
 import { PageHeader } from '../components/layout/Layout'
 import {
@@ -141,37 +140,10 @@ export default function FindingsPage() {
   const isBasic = viewMode === 'basic'
   const insightsState = useApi<ApiEnvelope<InsightsData>>(apiPath('/insights'))
   const data = insightsState.data?.data
-  const location = useLocation()
   const seriesState = useApi<ApiEnvelope<Timeseries>>(
     apiPath('/stats/timeseries', { granularity: 'month' }),
   )
   const series = seriesState.data?.data
-
-  useEffect(() => {
-    if (location.hash !== '#anomalias') return
-    let target: HTMLElement | null = null
-    let observer: ResizeObserver | null = null
-    let stopTimer = 0
-
-    const jump = () => {
-      target?.scrollIntoView({ behavior: 'auto', block: 'start' })
-    }
-
-    const startTimer = window.setTimeout(() => {
-      target = document.getElementById('anomalias')
-      if (!target) return
-      jump()
-      observer = new ResizeObserver(jump)
-      observer.observe(target)
-      stopTimer = window.setTimeout(() => observer?.disconnect(), 3000)
-    }, 150)
-
-    return () => {
-      window.clearTimeout(startTimer)
-      window.clearTimeout(stopTimer)
-      observer?.disconnect()
-    }
-  }, [location.hash, data])
 
   return (
     <div className="animate-fade-up">
@@ -278,8 +250,6 @@ export default function FindingsPage() {
                 <InsightCard key={insight.id} insight={insight} compact={isBasic} />
               ))
             )}
-
-            
           </div>
         </>
       )}
