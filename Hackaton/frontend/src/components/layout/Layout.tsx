@@ -40,7 +40,7 @@ export function PageHeader({
 }: {
   eyebrow: string
   title: string
-  description: string
+  description?: string
   icon: LucideIcon
   actions?: ReactNode
 }) {
@@ -53,7 +53,9 @@ export function PageHeader({
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2 className="mt-1 text-lg font-semibold tracking-tight text-white sm:text-xl">{title}</h2>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slateish sm:text-sm">{description}</p>
+          {description && (
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slateish sm:text-sm">{description}</p>
+          )}
         </div>
       </div>
       {actions}
@@ -76,10 +78,6 @@ export function Layout() {
           <Outlet />
           <footer className="mt-8 border-t border-ink-700/60 pb-6 pt-4 text-[10px] leading-relaxed text-slateish">
             <p>{DISCLAIMER}</p>
-            <p className="mt-1">
-              Fuente de datos: NASA FIRMS (MODIS Collection 6.1 y VIIRS 375 m). Este producto no está avalado por NASA.
-              Atribución requerida: NASA FIRMS.
-            </p>
           </footer>
         </main>
       </div>
