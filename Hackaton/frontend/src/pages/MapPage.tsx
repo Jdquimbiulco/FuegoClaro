@@ -13,7 +13,7 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { FiresMap } from '../components/map/FiresMap'
 import { PageHeader } from '../components/layout/Layout'
 import { FiltersBar } from '../components/layout/FiltersBar'
@@ -34,7 +34,14 @@ import type { DetectionsResponse } from '../types/api'
 const MAP_LIMIT = 20000
 
 export default function MapPage() {
-  const { meta, filters, update, apiPath, regionName, viewMode, setViewMode } = useFilters()
+  const [params] = useSearchParams()
+  const focus = useMemo(() => {
+    const lat = Number(params.get('focus_lat'))
+    const lon = Number(params.get('focus_lon'))
+    if (!params.get('focus_lat') || !params.get('focus_lon') || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null
+    return { coordinates: [lat, lon] as [number, number], name: params.get('event') || 'Evento seleccionado', demo: params.get('demo_event') === '1' }
+  }, [params])
+  const { meta, filters, apiPath, regionName, viewMode, setViewMode } = useFilters()
   const detectionsState = useApi<DetectionsResponse>(
     apiPath('/detections', { limit: MAP_LIMIT, order: 'desc' }),
   )
@@ -169,42 +176,9 @@ export default function MapPage() {
 
           <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
             <div>
-              {/* Acceso Rápido a Regiones Naturales */}
-              <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-xs text-slate-300">
-                  <span className="font-semibold text-slate-400">Enfoque regional:</span>
-                  <span className="text-slate-100 font-bold">{regionName}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => update({ region: 'all' })}
-                    className={`focus-ring rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
-                      filters.region === 'all'
-                        ? 'border-ember-400/60 bg-ember-500/20 text-white font-bold'
-                        : 'border-ink-700 bg-ink-850/80 text-slate-300 hover:border-ink-600 hover:text-white'
-                    }`}
-                  >
-                    🇪🇨 Ecuador
-                  </button>
-                  {meta.regions.map((reg) => (
-                    <button
-                      key={reg.id}
-                      type="button"
-                      onClick={() => update({ region: reg.id })}
-                      className={`focus-ring rounded-lg border px-2 py-1 text-xs font-medium transition ${
-                        filters.region === reg.id
-                          ? 'border-ember-400/60 bg-ember-500/20 text-white font-bold'
-                          : 'border-ink-700 bg-ink-850/80 text-slate-300 hover:border-ink-600 hover:text-white'
-                      }`}
-                    >
-                      {reg.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+              {focus && <div className="mb-2 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-xs text-amber-100">{focus.demo ? 'Ubicación de demostración' : 'Evento seleccionado'}: {focus.name}. El marcador amarillo identifica el centro del evento.</div>}
               <FiresMap
+                focus={focus}
                 points={points}
                 bbox={bbox}
                 geojson={geojsonState.data}

@@ -1,4 +1,4 @@
-.PHONY: install backend frontend test build ingest docker-build docker-up docker-down docker-logs docker-test docker-ingest
+.PHONY: install backend frontend test build ingest ml-dataset ml-train ml-predict docker-build docker-up docker-down docker-logs docker-test docker-ingest
 
 install:
 	cd backend && python -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
@@ -18,6 +18,15 @@ build:
 
 ingest:
 	backend/.venv/bin/python scripts/ingest_firms.py --start 2022-01-01 --end 2026-11-12 --keep-raw
+
+ml-dataset:
+	backend/.venv/bin/python scripts/build_fire_risk_dataset.py --start 2022-01-01 --end 2026-11-12
+
+ml-train:
+	backend/.venv/bin/python scripts/train_fire_risk_model.py
+
+ml-predict:
+	backend/.venv/bin/python scripts/predict_fire_risk.py --lat $(LAT) --lon $(LON) --date $(DATE) --window-days $(or $(WINDOW),7)
 
 docker-build:
 	docker compose build

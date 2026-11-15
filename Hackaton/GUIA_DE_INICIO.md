@@ -328,7 +328,7 @@ docker compose run --rm backend python scripts/check_dataset.py
 docker compose run --rm backend python -m pytest -q
 ```
 
-Resultado esperado: `12 passed`.
+Resultado esperado: `28 passed`.
 
 ### 6.5 Cambiar puertos
 
@@ -411,7 +411,7 @@ Resultado esperado: `Sin problemas de integridad detectados.`
 backend/.venv/bin/python -m pytest -q
 ```
 
-Resultado esperado: `12 passed`.
+Resultado esperado: `28 passed`.
 
 ### 7.5 Build de producción del frontend
 
@@ -510,6 +510,35 @@ backend/.venv/bin/python scripts/build_regions.py
 backend/.venv/bin/python scripts/check_dataset.py
 backend/.venv/bin/python -m pytest -q
 ```
+
+### Modelo de riesgo de incendios (ML)
+
+El modelo usa el histórico FIRMS como etiqueta y añade clima, DEM y NDVI.
+Trabaja por celda de 0.1° × día y predice horizontes de 0 a 7 días.
+
+```bash
+# 1. Dataset (sin NDVI si no hay EARTHDATA_TOKEN)
+backend/.venv/bin/python scripts/build_fire_risk_dataset.py \
+  --start 2022-01-01 --end 2026-11-12
+
+# Prueba rápida sin red
+backend/.venv/bin/python scripts/build_fire_risk_dataset.py \
+  --limit-cells 100 --skip-weather --skip-dem --skip-ndvi
+
+# 2. Entrenamiento
+backend/.venv/bin/python scripts/train_fire_risk_model.py
+
+# 3. Predicción
+backend/.venv/bin/python scripts/predict_fire_risk.py \
+  --lat -4.4161 --lon -79.54454 --date 2026-11-20 --window-days 7
+```
+
+- El token de Earthdata se define en `backend/.env`; **nunca** se versiona.
+- Salidas: `data/processed/ml/` (dataset, modelo, métricas y umbrales).
+- Si NDVI falla, el dataset se genera con `ndvi_available=0` y advertencia.
+- Los niveles Bajo/Medio/Alto/Extremo son percentiles de validación; la
+  probabilidad absoluta también se devuelve.
+- Metodología completa: [`docs/07-ml-risk.md`](docs/07-ml-risk.md).
 
 ---
 
@@ -739,6 +768,7 @@ BACKEND_PORT=8010 FRONTEND_PORT=5180 docker compose up -d --build
 - `docs/04-api.md` — endpoints y parámetros.
 - `docs/05-runbook.md` — operación, actualización y resolución de problemas.
 - `docs/06-docker.md` — Docker Compose, arquitectura de imágenes, datos y troubleshooting.
+- `docs/07-ml-risk.md` — dataset, modelo, calibración, umbrales y limitaciones del riesgo ML.
 
 ---
 

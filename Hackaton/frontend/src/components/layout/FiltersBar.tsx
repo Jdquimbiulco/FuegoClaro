@@ -170,7 +170,7 @@ function QualitySelector({
   )
 }
 
-export function FiltersBar() {
+export function FiltersBar({ demonstration = false }: { demonstration?: boolean } = {}) {
   const { meta, filters, update, reset, activeFilterCount, viewMode, regionName } = useFilters()
   const [showCustomDates, setShowCustomDates] = useState(false)
 
@@ -365,7 +365,7 @@ export function FiltersBar() {
               <strong className="text-slate-200">{formatDate(filters.end)}</strong>.
             </span>
             <span className="text-[10px] text-slate-400">
-              Datos verificados por satélites NASA Terra, Aqua y NOAA-20.
+              {demonstration ? 'Ejemplos simulados para revisar la interfaz.' : 'Datos de satélites NASA Terra, Aqua y NOAA-20.'}
             </span>
           </div>
         </div>

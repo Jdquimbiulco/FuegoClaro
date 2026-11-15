@@ -21,6 +21,13 @@ dist/
 # data/processed/*
 # data/manifests/*
 
+# Caché de fuentes externas del pipeline ML (clima, DEM, NDVI)
+data/cache/
+
+# Artefactos ML generados (dataset, modelo, métricas)
+#data/processed/ml/
+*.joblib
+
 # OS / editor
 .DS_Store
 .vscode/
