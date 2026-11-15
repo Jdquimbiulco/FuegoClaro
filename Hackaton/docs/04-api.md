@@ -24,9 +24,15 @@ Usados por la mayoría de endpoints analíticos: `start_date` (YYYY-MM-DD), `end
 - `GET /anomalies` — `threshold`, `window_days`, `min_observed`, `fdr_alpha`, `max_results`.
 - `GET /insights` — hallazgos deterministas trazables.
 - `GET /export/detections.csv` — exportación CSV con filtros.
+- `GET /fire-events` — eventos espaciotemporales de detecciones. `format=geojson` (por defecto), `dashboard` o `json`; admite `severity`, `province_ids`, `limit` y `offset`.
+- `GET /fire-events/{event_id}` — detalle trazable de un evento agrupado.
+- `GET /susceptibility` — mapa agregado precalculado; mientras el artefacto no exista devuelve `200` con módulo `pending` y una colección vacía.
+- `GET /susceptibility/point` — inferencia puntual; requiere `lat`, `lon`, `date` y admite `window_days=0..7`.
+- `GET /analytics/summary` — composición de detecciones, eventos y distribución de riesgo.
 
 ## Notas
 
 - Si el sensor filtrado no tiene datos en el periodo, la respuesta es vacía (no se inventan valores).
 - `format=geojson` en detecciones devuelve una `FeatureCollection` para consumo directo en mapas.
 - Errores de ingesta/FIRMS no deben producir datasets parciales publicados (la ingesta es estricta).
+- Los eventos son agrupaciones de detecciones y sus polígonos no representan área quemada. La predicción de riesgo es probabilística y sus bandas dependen del horizonte consultado.

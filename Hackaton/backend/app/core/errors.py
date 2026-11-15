@@ -24,5 +24,36 @@ class NotFoundError(FuegoClaroError):
         super().__init__("NOT_FOUND", message, status_code=404)
 
 
+class ModuleNotReadyError(FuegoClaroError):
+    """El artefacto necesario para un módulo opcional aún no está disponible."""
+
+    def __init__(self, module: str, detail: str | None = None):
+        super().__init__(
+            "MODULE_UNAVAILABLE",
+            f"El módulo '{module}' no está disponible.",
+            status_code=503,
+            details={"module": module, "status": "pending", "detail": detail},
+        )
+
+
+class ModuleContractError(FuegoClaroError):
+    """Un artefacto disponible no cumple la forma esperada por la API."""
+
+    def __init__(self, module: str, detail: str):
+        super().__init__(
+            "CONTRACT_ERROR",
+            f"El módulo '{module}' devolvió datos que no cumplen el contrato.",
+            status_code=503,
+            details={"module": module, "status": "error", "detail": detail},
+        )
+
+
+class InputValidationError(FuegoClaroError):
+    """Validación de negocio fuera de los validadores declarativos de FastAPI."""
+
+    def __init__(self, message: str, details: dict | None = None):
+        super().__init__("VALIDATION_ERROR", message, status_code=422, details=details)
+
+
 def bad_request(message: str, details: dict | None = None) -> HTTPException:
     return HTTPException(status_code=400, detail={"code": "BAD_REQUEST", "message": message, "details": details or {}})
