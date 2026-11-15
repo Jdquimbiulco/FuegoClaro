@@ -186,11 +186,11 @@ export default function MapPage() {
                 total={total}
               />
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slateish">
-                <span>Fondo: CARTO Dark Matter · OpenStreetMap</span>
+                <span>Fondo cartográfico: Esri World Canvas / Satellite / Topo (Sin marcas de agua)</span>
                 <span className="text-ink-500">·</span>
                 <span>{meta.attribution ?? 'Fuente: NASA FIRMS'}</span>
                 <span className="text-ink-500">·</span>
-                <span>Zoom máximo 17</span>
+                <span>Zoom con rueda o controles inferiores</span>
               </div>
             </div>
 
