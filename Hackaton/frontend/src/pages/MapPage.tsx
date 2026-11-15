@@ -54,12 +54,17 @@ function eventMapUrl(event: FireEvent, params: URLSearchParams, demo: boolean): 
 
 function EventsFeed({ events, params, loading, demo }: { events: FireEvent[]; params: URLSearchParams; loading: boolean; demo: boolean }) {
   const scrollerRef = useRef<HTMLDivElement>(null)
-  const [scroll, setScroll] = useState({ left: 0, max: 0 })
+  const rangeRef = useRef<HTMLInputElement>(null)
+  const [maxScroll, setMaxScroll] = useState(0)
 
   useLayoutEffect(() => {
     const element = scrollerRef.current
     if (!element) return
-    const sync = () => setScroll({ left: element.scrollLeft, max: Math.max(0, element.scrollWidth - element.clientWidth) })
+    const sync = () => {
+      const max = Math.max(0, element.scrollWidth - element.clientWidth)
+      setMaxScroll((current) => current === max ? current : max)
+      if (rangeRef.current) rangeRef.current.value = String(Math.min(element.scrollLeft, Math.max(1, max)))
+    }
     const observer = new ResizeObserver(sync)
     observer.observe(element)
     const frame = requestAnimationFrame(sync)
@@ -73,7 +78,12 @@ function EventsFeed({ events, params, loading, demo }: { events: FireEvent[]; pa
   }, [events])
 
   const setScrollLeft = (left: number) => {
-    scrollerRef.current?.scrollTo({ left, behavior: 'smooth' })
+    const element = scrollerRef.current
+    if (!element) return
+    const max = Math.max(0, element.scrollWidth - element.clientWidth)
+    const next = Math.max(0, Math.min(left, max))
+    element.scrollLeft = next
+    if (rangeRef.current) rangeRef.current.value = String(next)
   }
 
   return (
@@ -90,7 +100,7 @@ function EventsFeed({ events, params, loading, demo }: { events: FireEvent[]; pa
         <p className="py-5 text-xs text-slateish">No hay eventos térmicos agrupados para los filtros actuales.</p>
       ) : (
         <>
-        <div ref={scrollerRef} onScroll={(event) => setScroll((current) => ({ ...current, left: event.currentTarget.scrollLeft }))} className="events-feed__scroller flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 pr-1" aria-label="Eventos térmicos priorizados">
+        <div ref={scrollerRef} onScroll={(event) => { if (rangeRef.current) rangeRef.current.value = String(event.currentTarget.scrollLeft) }} className="events-feed__scroller flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain pb-3 pr-1" aria-label="Eventos térmicos priorizados">
           {events.slice(0, 30).map((event) => {
             const level = EVENT_LEVELS[event.nivel_alerta]
             return (
@@ -114,9 +124,9 @@ function EventsFeed({ events, params, loading, demo }: { events: FireEvent[]; pa
         </div>
         <div className="events-feed__track mt-1 flex items-center gap-3" aria-label="Desplazamiento del feed">
           <span className="events-feed__track-label">Desplazar eventos</span>
-          <button type="button" aria-label="Eventos anteriores" onClick={() => setScrollLeft(Math.max(0, scroll.left - 300))} disabled={scroll.max === 0 || scroll.left <= 0} className="focus-ring rounded-md border border-ink-700 px-2 py-1 text-xs text-slateish disabled:cursor-not-allowed disabled:opacity-35">←</button>
-          <input aria-label="Barra horizontal de eventos" className="events-feed__range" type="range" min="0" max={Math.max(1, scroll.max)} value={Math.min(scroll.left, Math.max(1, scroll.max))} onChange={(event) => setScrollLeft(Number(event.target.value))} disabled={scroll.max === 0} />
-          <button type="button" aria-label="Eventos siguientes" onClick={() => setScrollLeft(Math.min(scroll.max, scroll.left + 300))} disabled={scroll.max === 0 || scroll.left >= scroll.max} className="focus-ring rounded-md border border-ink-700 px-2 py-1 text-xs text-slateish disabled:cursor-not-allowed disabled:opacity-35">→</button>
+          <button type="button" aria-label="Eventos anteriores" onClick={() => setScrollLeft((scrollerRef.current?.scrollLeft ?? 0) - 300)} disabled={maxScroll === 0} className="focus-ring rounded-md border border-ink-700 px-2 py-1 text-xs text-slateish disabled:cursor-not-allowed disabled:opacity-35">←</button>
+          <input ref={rangeRef} aria-label="Barra horizontal de eventos" className="events-feed__range" type="range" min="0" max={Math.max(1, maxScroll)} defaultValue="0" onInput={(event) => setScrollLeft(event.currentTarget.valueAsNumber)} disabled={maxScroll === 0} />
+          <button type="button" aria-label="Eventos siguientes" onClick={() => setScrollLeft((scrollerRef.current?.scrollLeft ?? 0) + 300)} disabled={maxScroll === 0} className="focus-ring rounded-md border border-ink-700 px-2 py-1 text-xs text-slateish disabled:cursor-not-allowed disabled:opacity-35">→</button>
         </div>
         </>
       )}
