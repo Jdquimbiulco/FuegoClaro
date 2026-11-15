@@ -36,7 +36,7 @@ function AnomaliesRedirect({ meta }: { meta: Meta }) {
   const params = new URLSearchParams(search)
   if (!params.get('start')) params.set('start', meta.default_window.start)
   if (!params.get('end')) params.set('end', meta.default_window.end)
-  return <Navigate to={`/hallazgos?${params.toString()}#anomalias`} replace />
+  return <Navigate to={`/hallazgos?${params.toString()}`} replace />
 }
 
 export default function App() {
