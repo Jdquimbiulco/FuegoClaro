@@ -134,19 +134,49 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, #ff5c16) 22%, transparent), 0 0 12px color-mix(in srgb, var(--c, #ff5c16) 55%, transparent);
 }
 
+.marker-cluster {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.marker-cluster:hover {
+  transform: scale(1.12) !important;
+}
 .marker-cluster-small,
 .marker-cluster-medium,
 .marker-cluster-large {
-  background: rgba(255, 92, 22, 0.16) !important;
+  border-radius: 9999px !important;
 }
-.marker-cluster-small div,
-.marker-cluster-medium div,
-.marker-cluster-large div {
-  background: rgba(255, 92, 22, 0.55) !important;
+.marker-cluster-small {
+  background: rgba(255, 176, 32, 0.2) !important;
+}
+.marker-cluster-small div {
+  background: linear-gradient(135deg, rgba(255, 176, 32, 0.85), rgba(255, 92, 22, 0.9)) !important;
   color: #fff !important;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 11px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  box-shadow: 0 0 0 6px rgba(255, 92, 22, 0.12);
+  box-shadow: 0 0 15px rgba(255, 176, 32, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.marker-cluster-medium {
+  background: rgba(255, 92, 22, 0.22) !important;
+}
+.marker-cluster-medium div {
+  background: linear-gradient(135deg, rgba(255, 92, 22, 0.9), rgba(232, 71, 11, 0.95)) !important;
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  box-shadow: 0 0 18px rgba(255, 92, 22, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+.marker-cluster-large {
+  background: rgba(255, 77, 94, 0.25) !important;
+}
+.marker-cluster-large div {
+  background: linear-gradient(135deg, rgba(255, 77, 94, 0.92), rgba(185, 53, 10, 0.98)) !important;
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  box-shadow: 0 0 24px rgba(255, 77, 94, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
 
 /* ------------------------------------------------------------------ calendar */
