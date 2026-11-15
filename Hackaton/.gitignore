@@ -26,7 +26,7 @@ data/cache/
 
 # Artefactos ML generados (dataset, modelo, métricas)
 #data/processed/ml/
-*.joblib
+#*.joblib
 
 # OS / editor
 .DS_Store
