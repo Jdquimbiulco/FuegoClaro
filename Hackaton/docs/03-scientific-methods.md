@@ -45,6 +45,30 @@ Cada registro se mapea a un esquema único: `id` (hash determinista), producto/s
 
 - Plantillas deterministas sobre agregaciones/comparación/anomalías ya calculadas. Sin LLM para cifras; cada hallazgo incluye indicador, evidencia, método y límite.
 
+## Modelo de riesgo ML
+
+- **Unidad:** celda de 0.1° (~11 km) × día local.
+- **Etiqueta:** presencia de evento FIRMS en la celda-día; `y_dh` indica fuego
+  exactamente en `D+h` y `y_within_h` en `D..D+h`.
+- **Predictores:** FIRMS/eventos con lags y ventanas, clima Open-Meteo, DEM,
+  NDVI MOD13Q1, calendario y contexto estático (incluida Galápagos).
+- **Fuga:** FIRMS, NDVI y vecindarios se usan hasta `D-1`; para `h>=1` el clima
+  también se limita a `D-1` (se excluyen columnas `_d0`).
+- **Split temporal:** entrenamiento 2022–2024, validación 2025, prueba 2026,
+  restando `h` días al final de cada bloque.
+- **Modelo:** `HistGradientBoostingClassifier` por horizonte, con submuestreo
+  de negativos solo en entrenamiento y calibración isotónica/logística en
+  validación.
+- **Niveles:** Bajo/Medio/Alto/Extremo por percentiles p50/p85/p95 de las
+  probabilidades calibradas de validación; son relativos, no una norma.
+- **Métricas:** ROC-AUC, PR-AUC, Brier, log-loss, precisión/recall/F1,
+  precisión y captura en el top k, y baselines de climatología, persistencia y
+  regresión logística.
+- **Galápagos:** se incluye con `is_galapagos` y `dist_volcano_km`; la
+  actividad volcánica exige reportar métricas separadas.
+
+Detalle y comandos: [`07-ml-risk.md`](07-ml-risk.md).
+
 ## Limitaciones globales
 
 - Detección ≠ incendio confirmado ≠ superficie quemada.
