@@ -122,7 +122,7 @@ export function MobileNav() {
 }
 
 export function Topbar({ meta }: { meta: ReturnType<typeof useFilters>['meta'] }) {
-  const { filters, regionName } = useFilters()
+  const { regionName } = useFilters()
   const { pathname } = useLocation()
   const showViewToggle = !pathname.startsWith('/metodologia')
   const live = meta.data_mode === 'real'

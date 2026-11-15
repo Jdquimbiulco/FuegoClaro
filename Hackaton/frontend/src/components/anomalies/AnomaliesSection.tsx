@@ -2,10 +2,8 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   ChevronDown,
-  FlaskConical,
   Search,
   SlidersHorizontal,
-  Sparkles,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { AnomalyBars } from '../charts/Charts'
@@ -15,7 +13,6 @@ import {
   EmptyState,
   ErrorState,
   LoadingBlock,
-  Notice,
   SectionHeading,
 } from '../ui/Primitives'
 import { useFilters } from '../../context/FiltersContext'

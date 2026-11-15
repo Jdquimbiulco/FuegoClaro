@@ -1,422 +1,162 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Compass,
-  ExternalLink,
-  Flame,
-  MapPin,
-  Moon,
-  Radio,
-  ShieldAlert,
-  TreePine,
-  Wind,
-} from 'lucide-react'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { AlertTriangle, Flame, MapPin, Radio, RefreshCw, ShieldAlert } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PageHeader } from '../components/layout/Layout'
 import { FiltersBar } from '../components/layout/FiltersBar'
-import {
-  Badge,
-  Card,
-  Notice,
-  SectionHeading,
-  StatCard,
-} from '../components/ui/Primitives'
+import { Badge, Card, EmptyState, ErrorState, LoadingBlock, SectionHeading, StatCard } from '../components/ui/Primitives'
+import { TimeSeriesChart } from '../components/charts/Charts'
 import { useFilters } from '../context/FiltersContext'
-import { formatDecimal, formatNumber } from '../lib/format'
+import { useFireDashboard } from '../hooks/useFireDashboard'
+import { ProvinceMultiSelect } from '../components/layout/ProvinceMultiSelect'
+import { formatDate, formatDecimal, formatNumber } from '../lib/format'
+import type { Granularity } from '../types/api'
+import type { AlertLevel, FireDashboard, FireEvent } from '../types/fire'
 
-interface FireCluster {
-  id: string
-  name: string
-  province: string
-  canton: string
-  frpTotal: number
-  pointsCount: number
-  severity: 'critical' | 'moderate' | 'minor'
-  isNight: boolean
-  inProtectedArea: boolean
-  protectedAreaName?: string
-  lastDetected: string
-  coordinates: [number, number]
+const LEVELS = {
+  alerta_roja: { label: 'Crítico', tone: 'critical', color: '#FF4D5E' },
+  alerta_media: { label: 'Moderado', tone: 'warning', color: '#FF8A34' },
+  quema_menor: { label: 'Bajo', tone: 'warning', color: '#FACC15' },
+} as const
+const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+const control = 'focus-ring rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-xs text-slate-100'
+
+function mapLink(event: FireEvent, search: string, demo: boolean) {
+  const params = new URLSearchParams(search)
+  params.set('start', event.inicio)
+  params.set('end', event.fin)
+  params.set('focus_lat', String(event.centro[0]))
+  params.set('focus_lon', String(event.centro[1]))
+  params.set('event', event.id_evento)
+  params.set('region', event.provincias[0] ?? 'all')
+  params.delete('provinces')
+  if (demo) params.set('demo_event', '1')
+  else params.delete('demo_event')
+  return `/mapa?${params.toString()}`
 }
 
-// Datos representativos calibrados con eventos históricos y listos para conectar con /api/v1/fire-events
-const MOCK_CLUSTERS: FireCluster[] = [
-  {
-    id: 'FC-EC-01',
-    name: 'Quilanga - San Antonio',
-    province: 'Loja',
-    canton: 'Quilanga',
-    frpTotal: 184.5,
-    pointsCount: 38,
-    severity: 'critical',
-    isNight: true,
-    inProtectedArea: false,
-    lastDetected: 'Paso nocturno (02:15 hora local)',
-    coordinates: [-4.298, -79.405],
-  },
-  {
-    id: 'FC-EC-02',
-    name: 'Sigchos - Chugchillán',
-    province: 'Cotopaxi',
-    canton: 'Sigchos',
-    frpTotal: 96.2,
-    pointsCount: 19,
-    severity: 'critical',
-    isNight: false,
-    inProtectedArea: true,
-    protectedAreaName: 'Zona amortiguamiento Ilinizas',
-    lastDetected: 'Paso diurno (13:40 hora local)',
-    coordinates: [-0.685, -78.892],
-  },
-  {
-    id: 'FC-EC-03',
-    name: 'Nanegalito - Calacalí',
-    province: 'Pichincha',
-    canton: 'Quito',
-    frpTotal: 42.1,
-    pointsCount: 9,
-    severity: 'moderate',
-    isNight: false,
-    inProtectedArea: true,
-    protectedAreaName: 'Reserva Geobotánica Pululahua',
-    lastDetected: 'Paso diurno (14:05 hora local)',
-    coordinates: [0.012, -78.531],
-  },
-  {
-    id: 'FC-EC-04',
-    name: 'Paquisha - Cordillera',
-    province: 'Zamora Chinchipe',
-    canton: 'Paquisha',
-    frpTotal: 22.4,
-    pointsCount: 4,
-    severity: 'minor',
-    isNight: false,
-    inProtectedArea: false,
-    lastDetected: 'Paso diurno (11:20 hora local)',
-    coordinates: [-3.931, -78.672],
-  },
-]
-
-export default function FiresPage() {
-  const { regionName } = useFilters()
-  const [activeTab, setActiveTab] = useState<'clusters' | 'risk' | 'filters'>('clusters')
-
-  const criticalCount = MOCK_CLUSTERS.filter((c) => c.severity === 'critical').length
-  const nightCount = MOCK_CLUSTERS.filter((c) => c.isNight).length
-  const totalFRP = MOCK_CLUSTERS.reduce((sum, c) => sum + c.frpTotal, 0)
-
+function Seasonality({ data }: { data: FireDashboard }) {
+  const years = [...new Set(data.seasonality.map((item) => item.period.slice(0, 4)))]
+  const values = new Map(data.seasonality.map((item) => [item.period, item.count]))
+  const max = Math.max(1, ...data.seasonality.map((item) => item.count))
+  const { update } = useFilters()
   return (
-    <div className="animate-fade-up">
-      <PageHeader
-        eyebrow="Módulo Especializado"
-        title={`Incendios Forestales & Alertas Críticas · ${regionName}`}
-        description="Identificación de incendios reales mediante clustering espaciotemporal (DBSCAN), descarte de falsos positivos térmicos industriales y evaluación de susceptibilidad por cantón."
-        icon={ShieldAlert}
-        actions={
-          <Link
-            to="/mapa"
-            className="focus-ring inline-flex items-center gap-2 rounded-lg border border-ember-400/35 bg-ember-500/10 px-3 py-2 text-xs font-semibold text-ember-100 transition hover:border-ember-300/60 hover:bg-ember-500/15"
-          >
-            <Compass size={14} /> Ver en Mapa General
-          </Link>
-        }
-      />
-
-      <FiltersBar />
-
-      <div className="relative z-10 mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Incendios agrupados"
-          value={formatNumber(MOCK_CLUSTERS.length)}
-          sub="Clusters espaciales confirmados"
-          icon={Flame}
-        />
-        <StatCard
-          label="Alertas críticas"
-          value={formatNumber(criticalCount)}
-          sub="FRP > 100 MW o propagación nocturna"
-          icon={AlertTriangle}
-          accent="#FF4D5E"
-        />
-        <StatCard
-          label="Actividad nocturna"
-          value={formatNumber(nightCount)}
-          sub="Fuego activo fuera de control"
-          icon={Moon}
-          accent="#FFB020"
-        />
-        <StatCard
-          label="Potencia térmica total"
-          value={`${formatDecimal(totalFRP, 0)} MW`}
-          sub="Suma de FRP en eventos agrupados"
-          icon={Radio}
-          accent="#3DDC97"
-        />
-      </div>
-
-      {/* Selector de Pestañas del Módulo */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 border-b border-ink-700/60 pb-3">
-        <button
-          type="button"
-          onClick={() => setActiveTab('clusters')}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === 'clusters'
-              ? 'bg-ember-500/20 text-ember-300 border border-ember-400/30'
-              : 'text-slateish hover:bg-ink-800 hover:text-white'
-          }`}
-        >
-          Eventos Agrupados (Clusters)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('risk')}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === 'risk'
-              ? 'bg-ember-500/20 text-ember-300 border border-ember-400/30'
-              : 'text-slateish hover:bg-ink-800 hover:text-white'
-          }`}
-        >
-          Modelo de Susceptibilidad (ML)
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('filters')}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-            activeTab === 'filters'
-              ? 'bg-ember-500/20 text-ember-300 border border-ember-400/30'
-              : 'text-slateish hover:bg-ink-800 hover:text-white'
-          }`}
-        >
-          Filtros Contextuales & Falsos Positivos
-        </button>
-      </div>
-
-      {activeTab === 'clusters' && (
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
-          <div className="space-y-3">
-            {MOCK_CLUSTERS.map((cluster) => (
-              <Card key={cluster.id} className="relative overflow-hidden">
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-1"
-                  style={{
-                    background:
-                      cluster.severity === 'critical'
-                        ? '#FF4D5E'
-                        : cluster.severity === 'moderate'
-                          ? '#FFB020'
-                          : '#3DDC97',
-                  }}
-                />
-                <div className="pl-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-white sm:text-sm">{cluster.name}</span>
-                      <Badge
-                        tone={
-                          cluster.severity === 'critical'
-                            ? 'critical'
-                            : cluster.severity === 'moderate'
-                              ? 'warning'
-                              : 'positive'
-                        }
-                      >
-                        {cluster.severity === 'critical'
-                          ? 'Alerta Crítica'
-                          : cluster.severity === 'moderate'
-                            ? 'Moderado'
-                            : 'Quema Menor'}
-                      </Badge>
-                      {cluster.isNight && (
-                        <Badge tone="critical" className="flex items-center gap-1">
-                          <Moon size={10} /> Detección Nocturna
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-[10px] text-slateish">{cluster.lastDetected}</span>
-                  </div>
-
-                  <p className="mt-1 flex items-center gap-1 text-xs text-slateish">
-                    <MapPin size={12} className="text-ember-400" />
-                    {cluster.canton}, {cluster.province} · {cluster.pointsCount} focos agrupados
-                  </p>
-
-                  {cluster.inProtectedArea && (
-                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] text-emerald-300">
-                      <TreePine size={12} />
-                      Área protegida / amortiguamiento: {cluster.protectedAreaName}
-                    </div>
-                  )}
-
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink-700/60 pt-2 text-xs">
-                    <span className="text-slateish">
-                      Potencia acumulada:{' '}
-                      <strong className="text-white">{formatDecimal(cluster.frpTotal, 1)} MW</strong>
-                    </span>
-                    <Link
-                      to="/mapa"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-ember-300 transition hover:text-ember-200"
-                    >
-                      Inspeccionar coordenadas en mapa <ExternalLink size={11} />
-                    </Link>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <SectionHeading
-                eyebrow="Criterio Científico"
-                title="¿Cómo se identifica un incendio real?"
-                description="Algoritmo de clustering espacial DBSCAN con radio de 1.5 a 2 km y ventana temporal de 24h."
-              />
-              <ul className="space-y-2.5 text-xs leading-relaxed text-slateish">
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-mint" />
-                  <span>
-                    <strong className="text-white">Agrupamiento de píxeles:</strong> Se agrupan múltiples detecciones de MODIS (1 km) y VIIRS (375 m) en un solo polígono envolvente.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-mint" />
-                  <span>
-                    <strong className="text-white">Potencia Radiativa (FRP):</strong> Valores mayores a 100 MW indican frentes de fuego extensos con alta biomasa en combustión.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-mint" />
-                  <span>
-                    <strong className="text-white">Paso nocturno (daynight == &apos;N&apos;):</strong> Es una señal crítica; las quemas agrícolas no se realizan de noche. Si el sensor detecta calor a las 02:00, el fuego está fuera de control.
-                  </span>
-                </li>
-              </ul>
-            </Card>
-
-            <Notice tone="warning" title="Respuesta y Emergencias">
-              Ante incendios forestales activos en áreas de cobertura vegetal o páramo, la notificación formal debe canalizarse con el <strong>ECU 911</strong> y los Cuerpos de Bomberos cantonales.
-            </Notice>
-          </div>
+    <Card>
+      <SectionHeading eyebrow="Estacionalidad" title="Actividad térmica por año y mes"
+        description="Histórico disponible con los mismos filtros territoriales, de sensor y confianza. Selecciona un mes para analizarlo. El color representa detecciones registradas." />
+      {years.length === 0 ? <EmptyState title="Sin histórico para estos filtros" /> : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[580px] border-separate border-spacing-1 text-center text-xs">
+            <caption className="sr-only">Conteos mensuales de detecciones por año</caption>
+            <thead><tr><th scope="col" className="text-slateish">Año</th>{MONTHS.map((month) => <th scope="col" key={month} className="pb-2 font-medium text-slateish">{month}</th>)}</tr></thead>
+            <tbody>{years.map((year) => <tr key={year}>
+              <th scope="row" className="pr-2 font-medium text-slate-200">{year}</th>
+              {MONTHS.map((month, index) => {
+                const period = `${year}-${String(index + 1).padStart(2, '0')}`
+                const value = values.get(period)
+                return <td key={period}><button type="button" disabled={value === undefined}
+                  className="focus-ring h-10 w-full rounded-md border border-ink-700 text-[10px] text-white transition hover:border-ember-300 disabled:cursor-default disabled:opacity-30"
+                  style={{ backgroundColor: value === undefined || value === 0 ? '#142033' : `rgba(255, 92, 22, ${0.18 + 0.72 * Math.sqrt(value / max)})` }}
+                  aria-label={`${month} ${year}: ${value === undefined ? 'fuera del histórico disponible' : `${value} detecciones. Analizar mes`}`}
+                  title={`${month} ${year}: ${value === undefined ? 'Sin cobertura en el histórico' : `${formatNumber(value)} detecciones`}`}
+                  onClick={() => update({ start: `${period}-01`, end: `${period}-${new Date(Number(year), index + 1, 0).getDate()}` })}>
+                  {value === undefined ? '—' : formatNumber(value)}
+                </button></td>
+              })}
+            </tr>)}</tbody>
+          </table>
         </div>
       )}
-
-      {activeTab === 'risk' && (
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <Card>
-            <SectionHeading
-              eyebrow="Modelo Predictivo"
-              title="Semáforo de Susceptibilidad Cantonal"
-              description="Modelo supervisado entrenado con histórico 2022-2026, clima, topografía y combustible vegetal."
-            />
-            <div className="space-y-2.5">
-              {[
-                { canton: 'Quilanga (Loja)', risk: 'Extremo', score: 0.92, factor: 'Sequía prolongada + vientos > 35 km/h' },
-                { canton: 'Sigchos (Cotopaxi)', risk: 'Alto', score: 0.78, factor: 'Pendientes fuertes + vegetación seca' },
-                { canton: 'Pimampiro (Imbabura)', risk: 'Alto', score: 0.74, factor: 'Baja humedad relativa (< 25%)' },
-                { canton: 'Mejía (Pichincha)', risk: 'Medio', score: 0.52, factor: 'Zonas de páramo con actividad agrícola' },
-                { canton: 'Santa Cruz (Galápagos)', risk: 'Bajo', score: 0.15, factor: 'Humedad costera alta' },
-              ].map((item) => (
-                <div
-                  key={item.canton}
-                  className="flex items-center justify-between rounded-lg border border-ink-700/60 bg-ink-800/40 p-3 text-xs"
-                >
-                  <div>
-                    <p className="font-semibold text-white">{item.canton}</p>
-                    <p className="text-[11px] text-slateish">{item.factor}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge
-                      tone={
-                        item.risk === 'Extremo'
-                          ? 'critical'
-                          : item.risk === 'Alto'
-                            ? 'critical'
-                            : item.risk === 'Medio'
-                              ? 'warning'
-                              : 'positive'
-                      }
-                    >
-                      Riesgo {item.risk} ({Math.round(item.score * 100)}%)
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHeading
-              eyebrow="Variables del Modelo"
-              title="Factores que Alimentan la Predicción"
-              description="Enfoque preventivo para anticipar focos antes de que comience la ignición."
-            />
-            <div className="space-y-3 text-xs text-slateish">
-              <div className="rounded-lg border border-ink-700/60 bg-ink-800/30 p-2.5">
-                <p className="flex items-center gap-1.5 font-semibold text-white">
-                  <Wind size={13} className="text-sky-300" /> Meteorología en tiempo real
-                </p>
-                <p className="mt-1 text-[11px]">
-                  Temperatura máxima diurna, velocidad de rachas de viento y días consecutivos sin precipitación (Open-Meteo / ERA5).
-                </p>
-              </div>
-              <div className="rounded-lg border border-ink-700/60 bg-ink-800/30 p-2.5">
-                <p className="flex items-center gap-1.5 font-semibold text-white">
-                  <TreePine size={13} className="text-emerald-300" /> Cobertura vegetal (NDVI)
-                </p>
-                <p className="mt-1 text-[11px]">
-                  Contenido de humedad y estrés hídrico de la biomasa en páramos y bosques andinos.
-                </p>
-              </div>
-              <div className="rounded-lg border border-ink-700/60 bg-ink-800/30 p-2.5">
-                <p className="flex items-center gap-1.5 font-semibold text-white">
-                  <Compass size={13} className="text-amber-300" /> Topografía y factor humano
-                </p>
-                <p className="mt-1 text-[11px]">
-                  Pendiente del terreno (DEM) y proximidad a vías o asentamientos donde se realizan quemas agropecuarias.
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {activeTab === 'filters' && (
-        <div className="grid gap-4 xl:grid-cols-2">
-          <Card>
-            <SectionHeading
-              eyebrow="Descarte de Ruido"
-              title="Filtro de Mecheros Petroleros (Falsos Positivos)"
-              description="La Amazonía ecuatoriana presenta anomalías térmicas continuas por quema de gas en campos petroleros."
-            />
-            <p className="text-xs leading-relaxed text-slateish">
-              En provincias como <strong>Orellana</strong> y <strong>Sucumbíos</strong>, los satélites MODIS y VIIRS detectan constantemente altas temperaturas que no son incendios forestales, sino mecheros de combustión de gas en pozos de extracción.
-            </p>
-            <div className="mt-3 rounded-lg border border-ink-700/70 bg-ink-850 p-3 text-xs">
-              <p className="font-semibold text-white">Máscara de Coordenadas Fijas:</p>
-              <p className="mt-1 text-slateish">
-                El sistema cruza cada detección con el catálogo georreferenciado de mecheros industriales y los etiqueta automáticamente para evitar falsas alarmas ciudadanas.
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHeading
-              eyebrow="Prioridad Ecológica"
-              title="Cruce con el Sistema Nacional de Áreas Protegidas (SNAP)"
-              description="Evaluación de impacto inmediato en reservas biológicas y parques nacionales."
-            />
-            <p className="text-xs leading-relaxed text-slateish">
-              Un foco de calor que coincide geográficamente con un parque nacional o reserva ecológica (ej. Cayambe-Coca, Cotopaxi, Podocarpus) eleva automáticamente su severidad a <span className="font-semibold text-red-400">Prioridad Máxima</span> en el centro de mando.
-            </p>
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-200">
-              <TreePine size={16} className="shrink-0" />
-              <span>Capas SNAP integradas con geometrías vectoriales del Ministerio de Ambiente, Agua y Transición Ecológica (MAATE).</span>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+      <p className="mt-3 text-[11px] text-slateish">Cobertura de registros: {formatDate(data.history_period.start)} — {formatDate(data.history_period.end)}. Los meses de los extremos pueden estar incompletos.</p>
+    </Card>
   )
 }
 
+export default function FiresPage() {
+  const { regionName, filters, update, meta } = useFilters()
+  const { search } = useLocation()
+  const [granularity, setGranularity] = useState<Granularity>('month')
+  const [severity, setSeverity] = useState<'all' | AlertLevel>('all')
+  const [page, setPage] = useState({ key: '', count: 20 })
+  const [autoRefresh, setAutoRefresh] = useState(false)
+  const state = useFireDashboard(filters, meta, granularity)
+  const { refetch } = state
+  useEffect(() => {
+    if (!autoRefresh) return
+    const timer = window.setInterval(() => { if (!document.hidden) refetch() }, 60000)
+    return () => window.clearInterval(timer)
+  }, [autoRefresh, refetch])
+  const pageKey = `${search}:${severity}`
+  const visible = page.key === pageKey ? page.count : 20
+  const data = state.data
+  const priority = { alerta_roja: 0, alerta_media: 1, quema_menor: 2 }
+  const events = data?.events.filter((event) => severity === 'all' || event.nivel_alerta === severity)
+    .sort((a, b) => priority[a.nivel_alerta] - priority[b.nivel_alerta] || b.frp_total - a.frp_total) ?? []
+
+  return (
+    <div className="animate-fade-up">
+      <PageHeader eyebrow="Centro de mando" title={`Incendios y alertas · ${regionName}`}
+        description="Explora los eventos térmicos del periodo, prioriza su revisión y consulta la evidencia en el mapa."
+        icon={ShieldAlert} actions={<button type="button" className={control} disabled={state.loading} onClick={refetch}><RefreshCw size={14} className="mr-2 inline" />Actualizar</button>} />
+      <FiltersBar demonstration={state.demo} />
+      <div className="mb-4"><ProvinceMultiSelect /></div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <label className="text-xs text-slateish">Sensor <select aria-label="Sensor de eventos" className={control} value={filters.sensor} onChange={(event) => update({ sensor: event.target.value as typeof filters.sensor })}><option value="all">Ambos sensores</option><option>MODIS</option><option>VIIRS</option></select></label>
+        <label className="text-xs text-slateish">Confianza <select aria-label="Confianza de eventos" className={control} value={filters.confidence} onChange={(event) => update({ confidence: event.target.value })}><option value="">Todos los niveles</option><option value="high">Alta</option><option value="nominal,high">Nominal y alta</option><option value="low">Baja</option><option value="nominal">Nominal</option><option value="unknown">Sin clasificar</option></select></label>
+        <label className="ml-auto flex items-center gap-2 text-xs text-slateish"><input type="checkbox" checked={autoRefresh} onChange={(event) => setAutoRefresh(event.target.checked)} className="accent-orange-500" />Consultar actualizaciones cada minuto</label>
+      </div>
+      <p className="mb-4 text-xs text-slateish">{state.demo ? 'Vista de demostración' : meta.data_mode === 'sample' ? 'Muestra de datos' : 'Dataset'} · Último registro disponible: {formatDate(meta.date_range.end)}. La consulta automática revisa el dataset publicado; no es una transmisión en vivo.</p>
+      {state.demo && !state.loading && <div role="status" className="mb-4 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100"><strong>Datos de demostración.</strong> El servicio de eventos todavía no está disponible. Las tarjetas y gráficos siguientes usan ejemplos simulados para revisar la interfaz; no son alertas reales ni predicciones del modelo.</div>}
+      {state.error ? <ErrorState message={state.error} onRetry={refetch} /> : state.loading ? <LoadingBlock label="Calculando eventos e indicadores del periodo…" /> : data ? <>
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Total focos detectados" value={formatNumber(data.summary.detections)} sub={`${formatNumber(data.summary.events)} eventos agrupados`} icon={Flame} />
+          <StatCard label="Alertas críticas calculadas" value={formatNumber(data.summary.critical_events)} sub="Priorización por reglas del algoritmo" icon={AlertTriangle} accent="#FF4D5E" />
+          <StatCard label="Críticos confirmados" value={data.summary.confirmed_critical === null ? 'Sin datos' : formatNumber(data.summary.confirmed_critical)} sub="Pendiente de confirmación en campo" icon={ShieldAlert} accent="#FFB020" />
+          <StatCard label="Cantones en riesgo extremo" value={data.summary.extreme_risk_cantons === null ? 'Sin datos' : formatNumber(data.summary.extreme_risk_cantons)} sub="Pendiente del modelo de susceptibilidad" icon={MapPin} accent="#3DDC97" />
+        </div>
+        <div className="grid items-start gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <Card>
+            <SectionHeading eyebrow="Revisión prioritaria" title="Feed de alertas" description="Eventos del periodo ordenados por severidad y, dentro de cada nivel, por FRP." />
+            <label className="mb-3 block text-xs text-slateish">Mostrar severidad
+              <select className={`${control} mt-1 w-full`} value={severity} onChange={(event) => setSeverity(event.target.value as typeof severity)}>
+                <option value="all">Todos los niveles</option>{Object.entries(LEVELS).map(([value, level]) => <option key={value} value={value}>{level.label}</option>)}
+              </select>
+            </label>
+            <p className="mb-3 text-xs text-slateish">{formatNumber(events.length)} eventos · FRP total del periodo: {formatDecimal(data.summary.frp_total, 1)} MW</p>
+            <div className="max-h-[820px] space-y-3 overflow-y-auto pr-1">
+              {events.length === 0 ? <EmptyState title="Sin eventos para esta selección" description="Prueba otro periodo, territorio o nivel de severidad." /> : events.slice(0, visible).map((event) => {
+                const level = LEVELS[event.nivel_alerta]
+                return <article key={event.id_evento} className="rounded-xl border border-ink-700 border-l-[3px] bg-ink-850 p-3" style={{ borderLeftColor: level.color }}>
+                  <div className="flex items-center justify-between gap-2"><h3 className="text-xs font-semibold text-white">{event.id_evento}</h3><Badge tone={level.tone}>{level.label}</Badge></div>
+                  <p className="mt-2 text-sm font-medium text-slate-100">{event.province_names.join(' · ') || 'Provincia sin asignar'}</p>
+                  <p className="mt-1 text-[11px] text-slateish">Cantón: {event.canton ?? 'no disponible'} · {event.sensores.join(' / ')}</p>
+                  <div className="my-3 grid grid-cols-2 gap-2 text-xs"><div><p className="text-slateish">FRP total</p><strong className="text-white">{formatDecimal(event.frp_total, 1)} MW</strong></div><div><p className="text-slateish">Focos agrupados</p><strong className="text-white">{formatNumber(event.puntos_count)}</strong></div></div>
+                  <p className="text-[11px] text-slateish">{formatDate(event.inicio)} — {formatDate(event.fin)} · fecha local</p>
+                  <details className="mt-2 text-[11px] text-slateish"><summary className="cursor-pointer">Criterio de clasificación</summary><p className="mt-1">{event.motivo_regla}</p></details>
+                  <Link className="focus-ring mt-3 inline-flex items-center gap-2 rounded-lg border border-ember-400/30 bg-ember-500/10 px-3 py-2 text-xs font-semibold text-ember-200" to={mapLink(event, search, state.demo)}><MapPin size={13} />Ver en mapa</Link>
+                </article>
+              })}
+              {events.length > visible && <button type="button" className={`${control} w-full`} onClick={() => setPage({ key: pageKey, count: visible + 20 })}>Mostrar 20 más</button>}
+            </div>
+          </Card>
+          <div className="min-w-0 space-y-4">
+            <Card>
+              <SectionHeading eyebrow="Comparación temporal" title="MODIS vs VIIRS" description="Detecciones del periodo seleccionado, desglosadas por sensor." action={<select aria-label="Agrupación temporal" className={control} value={granularity} onChange={(event) => setGranularity(event.target.value as Granularity)}><option value="day">Diaria</option><option value="week">Semanal</option><option value="month">Mensual</option></select>} />
+              <TimeSeriesChart series={data.series} granularity={granularity} />
+            </Card>
+            <Card>
+              <SectionHeading eyebrow="Distribución territorial" title="Provincias con más eventos" description="Un evento que abarca varias provincias se cuenta en cada una de ellas. Selecciona una barra para filtrar." />
+              {data.by_province.length === 0 ? <EmptyState title="Sin eventos por provincia" /> : <div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.by_province.slice(0, 10)} layout="vertical" margin={{ left: 4, right: 20 }}>
+                <CartesianGrid stroke="#1B2A3F" horizontal={false} /><XAxis type="number" allowDecimals={false} tick={{ fill: '#8EA3BE', fontSize: 11 }} /><YAxis dataKey="name" type="category" width={125} tick={{ fill: '#CBD5E1', fontSize: 10 }} />
+                <Tooltip contentStyle={{ background: '#0B1320', border: '1px solid #1B2A3F', color: '#fff' }} />
+                <Bar dataKey="count" name="Eventos" fill="#FF7A2F" radius={[0, 4, 4, 0]} cursor="pointer" onClick={(entry) => { if (entry.id) update({ region: 'all', provinces: entry.id }) }} />
+              </BarChart></ResponsiveContainer></div>}
+            </Card>
+            <Seasonality data={data} />
+            <div className="flex items-start gap-2 rounded-xl border border-ink-700 p-3 text-xs text-slateish"><Radio size={16} className="shrink-0 text-ember-300" /><p>Las categorías priorizan la revisión de eventos térmicos. La confirmación de un incendio y su estado actual requieren información adicional a estas detecciones.</p></div>
+          </div>
+        </div>
+      </> : <EmptyState title="No hay información de eventos disponible" />}
+    </div>
+  )
+}
