@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.domain.aggregation import build_summary, build_timeseries
+from app.domain.aggregation import build_calendar_year, build_summary, build_timeseries
 from app.domain.models import FilterSpec
 
 
@@ -63,3 +63,10 @@ def test_build_timeseries_month_granularity():
     periods = {row["period"] for row in ts["series"]}
     assert periods == {"2024-01"}
     assert sum(row["count"] for row in ts["series"]) == 3
+
+
+def test_build_calendar_year_has_all_months():
+    data = build_calendar_year(sample_df(), FilterSpec(start_date="2024-01-01", end_date="2024-12-31"), 2024)
+    assert data["total"] == 3
+    assert len(data["months"]) == 12
+    assert data["months"][0]["total"] == 3

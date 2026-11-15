@@ -142,3 +142,15 @@ def test_ventana_temporal_48h():
     assert len(events_48h) == 1
     events_24h = detect_fire_events(pd.DataFrame(rows), eps_days=1)
     assert len(events_24h) == 2
+
+
+def test_id_evento_es_estable_ante_orden_de_entrada():
+    rows = [
+        _row("stable1", -0.700, -78.300, "2024-08-01", frp=20.0),
+        _row("stable2", -0.703, -78.303, "2024-08-01", frp=20.0),
+    ]
+
+    original = detect_fire_events(pd.DataFrame(rows))[0]
+    reordered = detect_fire_events(pd.DataFrame(list(reversed(rows))))[0]
+
+    assert original["id_evento"] == reordered["id_evento"]

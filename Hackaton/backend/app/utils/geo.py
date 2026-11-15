@@ -33,6 +33,11 @@ def regions_file() -> Path:
 
 
 @lru_cache
+def cantons_file() -> Path:
+    return get_settings().regions_dir / "ecuador_cantons.geojson"
+
+
+@lru_cache
 def load_province_features() -> list[dict]:
     path = regions_file()
     if not path.exists():
@@ -46,6 +51,29 @@ def load_province_features() -> list[dict]:
 def load_province_geometries() -> list[tuple[dict, shapely.Geometry]]:
     features = load_province_features()
     return [(feature["properties"], shape(feature["geometry"])) for feature in features]
+
+
+@lru_cache
+def load_canton_features() -> list[dict]:
+    path = cantons_file()
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as handle:
+        collection = json.load(handle)
+    return list(collection.get("features", []))
+
+
+@lru_cache
+def load_canton_geometries() -> list[tuple[dict, shapely.Geometry]]:
+    return [(feature["properties"], shape(feature["geometry"])) for feature in load_canton_features()]
+
+
+def canton_id_from_props(props: dict) -> str:
+    return str(props.get("DPA_CANTON") or props.get("canton_id") or "")
+
+
+def canton_name_from_props(props: dict) -> str:
+    return str(props.get("DPA_DESCAN") or props.get("name") or "Desconocido").title()
 
 
 def assign_provinces(df: pd.DataFrame) -> pd.DataFrame:
@@ -94,6 +122,35 @@ def assign_provinces(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def assign_cantons(df: pd.DataFrame) -> pd.DataFrame:
+    """Asigna cantón oficial CONALI/MDG por contención espacial de cada punto."""
+    if df.empty:
+        df["canton"] = pd.Series(dtype="object")
+        df["canton_id"] = pd.Series(dtype="object")
+        return df
+    geometries = load_canton_geometries()
+    if not geometries:
+        df = df.copy()
+        df["canton"] = pd.NA
+        df["canton_id"] = pd.NA
+        return df
+    lon = df["longitude"].to_numpy()
+    lat = df["latitude"].to_numpy()
+    name = np.full(len(df), None, dtype=object)
+    identifier = np.full(len(df), None, dtype=object)
+    for props, geom in geometries:
+        mask = shapely.contains_xy(geom, lon, lat) & (identifier == None)  # noqa: E711
+        if not mask.any():
+            continue
+        name[mask] = canton_name_from_props(props)
+        identifier[mask] = canton_id_from_props(props)
+    out = df.copy()
+    out["canton"] = name
+    out["canton_id"] = identifier
+    return out
+
+
+@lru_cache
 def regions_payload() -> dict:
     """Metadatos de regiones para el frontend (sin geometrías completas)."""
     features = load_province_features()
@@ -136,7 +193,25 @@ def regions_payload() -> dict:
                 "provinces": [p["id"] for p in members],
             }
         )
-    return {"regions": natural, "provinces": provinces}
+    cantons = []
+    for feature in load_canton_features():
+        props = feature["properties"]
+        geom = shape(feature["geometry"])
+        point = geom.representative_point()
+        canton_id = canton_id_from_props(props)
+        if not canton_id:
+            continue
+        cantons.append(
+            {
+                "id": canton_id,
+                "name": canton_name_from_props(props),
+                "province_id": slugify(str(props.get("DPA_DESPRO") or "")),
+                "province": str(props.get("DPA_DESPRO") or "").title(),
+                "bbox": list(geom.bounds),
+                "center": [point.y, point.x],
+            }
+        )
+    return {"regions": natural, "provinces": provinces, "cantons": cantons}
 
 
 def ecuador_geojson() -> dict:

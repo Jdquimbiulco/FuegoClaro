@@ -12,7 +12,7 @@ import pandas as pd
 
 from app.core.config import get_settings
 from app.domain.models import FilterSpec
-from app.utils.geo import regions_payload
+from app.utils.geo import assign_cantons, regions_payload
 
 STRING_COLUMNS = [
     "id",
@@ -34,6 +34,8 @@ STRING_COLUMNS = [
     "province_id",
     "region",
     "region_id",
+    "canton",
+    "canton_id",
     "provenance_id",
 ]
 
@@ -113,6 +115,7 @@ class DataStore:
                     frame[column] = frame[column].fillna("").astype(str).str.zfill(4 if column == "acq_time" else 5)
             if "acq_date_local" not in frame and "acq_date" in frame:
                 frame["acq_date_local"] = frame["acq_date"]
+            frame = assign_cantons(frame)
             self._df = frame
             self._mode = mode
             self._path = path
@@ -212,6 +215,7 @@ class DataStore:
             "confidence_levels": ["low", "nominal", "high", "unknown"],
             "regions": regions["regions"],
             "provinces": regions["provinces"],
+            "cantons": regions.get("cantons", []),
             "attribution": meta.manifest.get("attribution"),
             "source": meta.manifest.get("source"),
             "limitations": meta.manifest.get("limitations", []),
@@ -235,6 +239,8 @@ def apply_filters(df: pd.DataFrame, spec: FilterSpec, *, use_dates: bool = True)
         out = out[(out["acq_date_local"] >= spec.start_date) & (out["acq_date_local"] <= spec.end_date)]
     if spec.region_id and spec.region_id not in ("all", "ecuador"):
         out = out[(out["region_id"] == spec.region_id) | (out["province_id"] == spec.region_id)]
+    if spec.canton_id:
+        out = out[out["canton_id"] == spec.canton_id]
     if spec.sensor and spec.sensor != "all":
         out = out[out["sensor"] == spec.sensor]
     if spec.confidence:

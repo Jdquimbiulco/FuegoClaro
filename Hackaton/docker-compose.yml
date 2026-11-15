@@ -48,3 +48,21 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  # Job independiente del servidor web. Genera las capas GeoJSON al iniciar y
+  # luego según SUSCEPTIBILITY_REFRESH_SECONDS (86400 por defecto).
+  risk-refresh:
+    image: fuegoclaro-backend:local
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    init: true
+    env_file:
+      - path: ./backend/.env
+        required: false
+    command: ["python", "/app/scripts/susceptibility_scheduler.py"]
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      disable: true
+    restart: unless-stopped

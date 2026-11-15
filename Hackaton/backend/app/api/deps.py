@@ -39,6 +39,7 @@ def common_filters(
     start_date: str | None = Query(None, description="Fecha inicial local YYYY-MM-DD (por defecto, últimos 365 días)"),
     end_date: str | None = Query(None, description="Fecha final local YYYY-MM-DD"),
     region_id: str | None = Query(None, description="Región natural (costa/sierra/amazonia/galapagos), provincia o 'all'"),
+    canton_id: str | None = Query(None, description="Código DPA oficial del cantón"),
     sensor: str | None = Query("all", description="MODIS, VIIRS o all"),
     confidence: str | None = Query(None, description="Niveles separados por coma: low,nominal,high,unknown"),
     daynight: str | None = Query(None, description="D o N"),
@@ -76,10 +77,15 @@ def common_filters(
     if daynight_value and daynight_value not in ("D", "N"):
         raise HTTPException(status_code=400, detail="daynight debe ser D o N")
 
+    canton_value = (canton_id or "").strip() or None
+    canton_ids = {item["id"] for item in regions_payload().get("cantons", [])}
+    if canton_value and canton_value not in canton_ids:
+        raise HTTPException(status_code=400, detail=f"canton_id desconocido: {canton_value}")
     return FilterSpec(
         start_date=start_parsed.isoformat(),
         end_date=end_parsed.isoformat(),
         region_id=region_value,
+        canton_id=canton_value,
         sensor=sensor_value,
         confidence=confidence_values,
         daynight=daynight_value,
@@ -97,6 +103,7 @@ def response_meta(store: DataStore, spec: FilterSpec, *, notes: list[str] | None
         "period": {"start": spec.start_date, "end": spec.end_date},
         "filters": {
             "region_id": spec.region_id,
+            "canton_id": spec.canton_id,
             "sensor": spec.sensor,
             "confidence": spec.confidence,
             "daynight": spec.daynight,

@@ -24,10 +24,13 @@ def regions() -> dict:
     if not df.empty:
         region_counts = df["region_id"].value_counts().to_dict()
         province_counts = df["province_id"].value_counts().to_dict()
+        canton_counts = df["canton_id"].value_counts(dropna=True).to_dict() if "canton_id" in df else {}
         for region in payload["regions"]:
             region["count"] = int(region_counts.get(region["id"], 0))
         for province in payload["provinces"]:
             province["count"] = int(province_counts.get(province["id"], 0))
+        for canton in payload.get("cantons", []):
+            canton["count"] = int(canton_counts.get(canton["id"], 0))
     return json_safe(payload)
 
 

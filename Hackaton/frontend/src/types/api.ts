@@ -1,3 +1,5 @@
+import type { Feature, Geometry } from 'geojson'
+
 export type Sensor = 'MODIS' | 'VIIRS'
 export type ConfidenceLevel = 'low' | 'nominal' | 'high' | 'unknown'
 export type DataMode = 'real' | 'sample' | 'empty'
@@ -29,6 +31,16 @@ export interface Province {
   count?: number
 }
 
+export interface Canton {
+  id: string
+  name: string
+  province_id: string
+  province: string
+  bbox: [number, number, number, number]
+  center: [number, number]
+  count?: number
+}
+
 export interface Meta {
   app: string
   version: string
@@ -44,6 +56,7 @@ export interface Meta {
   confidence_levels: ConfidenceLevel[]
   regions: Region[]
   provinces: Province[]
+  cantons: Canton[]
   attribution: string | null
   source: string | null
   limitations: string[]
@@ -58,6 +71,7 @@ export interface FilterState {
   sensor: 'all' | Sensor
   confidence: string
   provinces?: string
+  canton?: string
 }
 
 export interface Detection {
@@ -193,6 +207,14 @@ export interface CalendarData {
   notes: string[]
 }
 
+export interface CalendarYearData {
+  year: number
+  months: { month: string; number: number; total: number; intensity: number }[]
+  max_monthly: number
+  total: number
+  notes: string[]
+}
+
 export interface SensorComparison {
   sensor: Sensor
   count: number
@@ -302,4 +324,58 @@ export interface ProvenanceResponse {
 export interface ApiEnvelope<T> {
   meta: ApiMeta
   data: T
+}
+
+export interface SusceptibilityProperties {
+  area_id: string
+  level: 'cell' | 'province' | 'canton'
+  latitude: number
+  longitude: number
+  province: string
+  province_id: string
+  region: string
+  region_id: string
+  is_galapagos: boolean
+  probability: number
+  risk_level: 'Bajo' | 'Medio' | 'Alto' | 'Extremo'
+  data_completeness: number
+  prediction_date: string
+  window_days: number
+  model_version: string | null
+}
+
+export interface SusceptibilityMapData {
+  level: string
+  type: 'FeatureCollection'
+  features: Feature<Geometry, SusceptibilityProperties>[]
+  model: Record<string, unknown>
+  risk_bands: Record<string, unknown>[]
+  summary: { by_risk?: Record<string, number>; generated_at?: string | null }
+  notes: string[]
+}
+
+export interface ProtectedAreaProperties {
+  area_id: string
+  name: string
+  category: string
+  subsystem: string
+  [key: string]: unknown
+}
+
+export interface EnvironmentalAlert {
+  id: string
+  type: 'predictive_environmental_risk' | 'observed_environmental_event'
+  priority: 'high' | 'critical'
+  title: string
+  coordinates: [number, number]
+  risk?: { cell_id: string; probability: number; level: string; window_days: number; prediction_date: string }
+  event?: { id: string; level: string; start: string | null; end: string | null; frp_total: number }
+  protected_area: { id: string; name: string; category: string; subsystem: string }
+  disclaimer: string
+}
+
+export interface EnvironmentalAlertsData {
+  alerts: EnvironmentalAlert[]
+  summary: { total: number; predictive: number; observed: number; critical: number }
+  notes: string[]
 }

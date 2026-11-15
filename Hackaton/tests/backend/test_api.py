@@ -24,7 +24,8 @@ def test_health_and_meta(client):
     assert meta.status_code == 200
     payload = meta.json()
     assert payload["data_mode"] in {"real", "sample", "empty"}
-    assert "regions" in payload and "provinces" in payload
+    assert "regions" in payload and "provinces" in payload and "cantons" in payload
+    assert len(payload["cantons"]) >= 220
     assert payload["date_range"]["start"] <= payload["date_range"]["end"]
 
 
@@ -64,3 +65,14 @@ def test_geojson_and_analytics_endpoints(client):
 def test_invalid_region_is_rejected(client):
     response = client.get("/api/v1/stats/summary", params={"region_id": "no-existe"})
     assert response.status_code == 400
+
+
+def test_canton_filter_and_invalid_canton(client):
+    meta = client.get("/api/v1/meta").json()
+    canton_id = meta["cantons"][0]["id"]
+    response = client.get("/api/v1/stats/summary", params={"canton_id": canton_id})
+    assert response.status_code == 200
+    assert response.json()["meta"]["filters"]["canton_id"] == canton_id
+
+    invalid = client.get("/api/v1/stats/summary", params={"canton_id": "0000"})
+    assert invalid.status_code == 400

@@ -238,6 +238,67 @@ class FireRiskPredictor:
             ),
         }
 
+    def predict_grid(
+        self,
+        when: str | date_type | pd.Timestamp,
+        window_days: int = 7,
+    ) -> pd.DataFrame:
+        """Predice todas las celdas de una vez para publicar una capa de mapa.
+
+        Esta ruta de lote evita abrir el parquet una vez por celda. Está pensada
+        para un job diario, no para solicitudes HTTP interactivas.
+        """
+        window_days = int(max(0, min(7, window_days)))
+        available = sorted(self.bundle["horizons"])
+        if window_days not in self.bundle["horizons"]:
+            window_days = max([value for value in available if value <= window_days], default=available[0])
+        when_ts = pd.Timestamp(when).normalize()
+        dataset = pd.read_parquet(self.dataset_path)
+        dataset["date"] = pd.to_datetime(dataset["date"]).dt.normalize()
+        exact = dataset[dataset["date"] == when_ts].copy()
+        if exact.empty:
+            eligible = dataset[dataset["date"] <= when_ts].sort_values(["cell_id", "date"])
+            exact = eligible.drop_duplicates("cell_id", keep="last").copy()
+        if exact.empty:
+            raise ValueError(f"La fecha {when_ts.date()} es anterior al historial disponible.")
+
+        cells = self.cells.copy()
+        cells["cell_id"] = cells["cell_id"].astype(str)
+        exact["cell_id"] = exact["cell_id"].astype(str)
+        frame = cells.merge(exact, on="cell_id", how="left", suffixes=("", "_history"))
+        if frame.empty or frame["date"].isna().all():
+            raise ValueError("No hay features históricas para las celdas del mapa.")
+
+        self._update_calendar_frame(frame, when_ts)
+        features = self.bundle["feature_columns"][window_days]
+        matrix = np.column_stack(
+            [pd.to_numeric(frame.get(column), errors="coerce").to_numpy(dtype=np.float32) for column in features]
+        )
+        probabilities = self.bundle["horizons"][window_days].predict_proba(matrix)[:, 1]
+        thresholds = self.bundle["thresholds"][window_days]
+        frame["probability"] = probabilities.astype(float)
+        frame["risk_level"] = risk_levels(probabilities, thresholds).astype(str)
+        frame["data_completeness"] = np.mean(~np.isnan(matrix), axis=1)
+        frame["prediction_date"] = when_ts.strftime("%Y-%m-%d")
+        frame["window_days"] = window_days
+        frame["model_version"] = self.bundle.get("version")
+        return frame[
+            [
+                "cell_id", "lat_idx", "lon_idx", "lat", "lon", "province", "province_id", "region", "region_id",
+                "is_galapagos", "probability", "risk_level", "data_completeness", "prediction_date", "window_days", "model_version",
+            ]
+        ].copy()
+
+    @staticmethod
+    def _update_calendar_frame(frame: pd.DataFrame, when: pd.Timestamp) -> None:
+        frame["month"] = when.month
+        frame["day_of_year"] = int(when.day_of_year)
+        frame["week_of_year"] = int(when.isocalendar().week)
+        frame["weekday"] = when.day_of_week
+        frame["is_weekend"] = int(when.day_of_week >= 5)
+        frame["doy_sin"] = np.sin(2 * np.pi * int(when.day_of_year) / 365.25)
+        frame["doy_cos"] = np.cos(2 * np.pi * int(when.day_of_year) / 365.25)
+
 
 def predict_batch(
     predictor: FireRiskPredictor,
