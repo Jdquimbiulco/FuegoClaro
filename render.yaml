@@ -1,0 +1,37 @@
+services:
+  # 1. Backend FastAPI (Docker Web Service en Capa Gratuita)
+  - type: web
+    name: fuegoclaro-backend
+    runtime: docker
+    rootDir: Hackaton
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: FIRMS_MAP_KEY
+        value: "60b428d831a68ff84729f91055d76f2e"
+
+  # 2. Frontend React / Vite (Static Site - Rápido, Gratuito, Sin Suspensión)
+  - type: web
+    name: fuegoclaro-frontend
+    runtime: static
+    rootDir: Hackaton/frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      # Enrutamiento SPA para React Router (Dashboard, Mapa, Calendario, etc.)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: fuegoclaro-backend
+          property: host
+        transform: https://$VALUE/api/v1
