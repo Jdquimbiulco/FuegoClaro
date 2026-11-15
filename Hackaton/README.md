@@ -12,22 +12,23 @@ Base funcional para la armonización y exploración de detecciones de focos de c
 
 ## Estructura
 
-- `backend/` — API, dominio, servicios e ingesta.
+- `backend/` — API, dominio, servicios, ingesta y ML (`backend/app/ml/`).
 - `frontend/` — aplicación web.
-- `data/processed/` — `detections.csv` y `manifest.json` publicados.
+- `data/processed/` — `detections.csv`, `manifest.json` y artefactos ML en `ml/`.
 - `data/samples/` — muestra auténtica para demostración offline.
 - `data/regions/` — GeoJSON provincial (Natural Earth 1:10m).
-- `scripts/` — `build_regions.py`, `ingest_firms.py`.
-- `docs/` — especificación original, API, métodos y runbook.
-- `tests/backend/` — pruebas de normalización, validación, agregación y anomalías.
+- `scripts/` — ingesta, regiones, dataset ML, entrenamiento e inferencia.
+- `docs/` — especificación original, API, métodos, runbook y riesgo ML.
+- `tests/backend/` — pruebas de normalización, validación, agregación, anomalías y ML.
 - `docker-compose.yml` — pila reproducible backend + frontend.
 - `backend/Dockerfile`, `frontend/Dockerfile`, `frontend/nginx.conf` — imágenes y proxy de la API.
 
 ## Requisitos
 
-- **Opción local:** Python 3.11+ (probado con 3.14), Node.js 20+, npm.
+- **Opción local:** Python 3.12 recomendado (scikit-learn/NumPy con ruedas estables), Node.js 20+, npm.
 - **Opción Docker:** Docker Engine 24+ (o Docker Desktop) y Docker Compose v2.24+.
 - Clave NASA FIRMS (MAP_KEY). No se incluye ni se versiona; solo es necesaria para volver a descargar datos.
+- Token Earthdata (opcional) para NDVI histórico vía NASA AppEEARS.
 
 ## Configuración
 
@@ -38,6 +39,7 @@ Base funcional para la armonización y exploración de detecciones de focos de c
    .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
    cp .env.example .env
    # Edita .env y define FIRMS_MAP_KEY=...
+   # Opcional para NDVI: EARTHDATA_TOKEN=... (nunca lo versiones)
    ```
 2. **Frontend**
    ```bash
@@ -85,7 +87,7 @@ Comandos útiles:
 make docker-up       # docker compose up -d --build
 make docker-down     # docker compose down
 make docker-logs     # logs en vivo
-make docker-test     # pytest dentro del contenedor (12 passed)
+make docker-test     # pytest dentro del contenedor (28 passed)
 make docker-ingest   # descarga FIRMS y reinicia el backend
 
 # Puertos alternativos si 8000/5173 están ocupados
@@ -106,6 +108,36 @@ backend/.venv/bin/python scripts/ingest_firms.py --start 2022-01-01 --end 2026-1
 - Escribe `data/processed/detections.csv`, `data/processed/manifest.json`, manifiesto histórico en `data/manifests/` y muestra en `data/samples/`.
 - Para verificar integridad/cobertura: `backend/.venv/bin/python scripts/check_dataset.py`.
 - Para regenerar geometrías provinciales: `backend/.venv/bin/python scripts/build_regions.py`.
+
+## Modelo de riesgo de incendios (ML)
+
+El proyecto incluye un pipeline reproducible que construye un dataset
+supervisado por **celda de 0.1° × día** (≈3,53 M de filas) y entrena un modelo
+de probabilidad de fuego para horizontes de **0 a 7 días**. Combina FIRMS y
+eventos ST-DBSCAN con clima de Open-Meteo, DEM y NDVI de NASA AppEEARS.
+
+```bash
+# Dataset (omite NDVI si aún no configuraste EARTHDATA_TOKEN)
+backend/.venv/bin/python scripts/build_fire_risk_dataset.py \
+  --start 2022-01-01 --end 2026-11-12
+
+# Entrenamiento (8 horizontes, calibración y métricas)
+backend/.venv/bin/python scripts/train_fire_risk_model.py
+
+# Inferencia para una ubicación y fecha
+backend/.venv/bin/python scripts/predict_fire_risk.py \
+  --lat -4.4161 --lon -79.54454 --date 2026-11-20 --window-days 7
+```
+
+- Salidas en `data/processed/ml/`: dataset Parquet, manifiesto, modelo
+  `risk_model.joblib`, métricas, umbrales y columnas por horizonte.
+- Niveles Bajo/Medio/Alto/Extremo por percentiles p50/p85/p95 de validación;
+  también se devuelve la probabilidad absoluta.
+- Galápagos se incluye con `is_galapagos` y `dist_volcano_km`.
+- Si falta el token de Earthdata, el dataset se genera con
+  `ndvi_available=0` y una advertencia. Nunca versiones `EARTHDATA_TOKEN`.
+- Detalle metodológico, control de fuga, baselines y limitaciones:
+  [`docs/07-ml-risk.md`](docs/07-ml-risk.md).
 
 ## Datos, productos y cobertura
 
@@ -134,3 +166,4 @@ Fuente: NASA FIRMS (MODIS Collection 6.1, VIIRS 375 m). Límites administrativos
 - `docs/04-api.md` — endpoints y parámetros.
 - `docs/05-runbook.md` — operación, actualización y resolución de problemas.
 - `docs/06-docker.md` — ejecución reproducible con Docker Compose.
+- `docs/07-ml-risk.md` — dataset, modelo, calibración, umbrales y limitaciones del riesgo ML.

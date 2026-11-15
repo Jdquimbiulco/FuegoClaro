@@ -136,7 +136,7 @@ docker compose run --rm backend python scripts/check_dataset.py
 docker compose run --rm backend python -m pytest -q
 ```
 
-Resultado esperado: `12 passed`.
+Resultado esperado: `28 passed`.
 
 También puedes validar la API:
 

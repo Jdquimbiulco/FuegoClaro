@@ -9,6 +9,7 @@ FuegoClaro es una base funcional para explorar detecciones de focos de calor MOD
 3. **Servicio de datos** (`backend/app/services/data_store.py`): carga CSV/manifiesto, modo real/muestra/vacío y filtros comunes.
 4. **API** (`backend/app/api/v1/`): endpoints REST y exportación CSV.
 5. **Frontend** (`frontend/src/`): React + Vite + Tailwind; estado de filtros en URL; Leaflet y Recharts.
+6. **ML de riesgo** (`backend/app/ml/` + `scripts/`): dataset celda-día, clima/DEM/NDVI, entrenamiento por horizonte 0–7 y script de inferencia. Ver `docs/07-ml-risk.md`.
 
 ## Flujo de datos
 
