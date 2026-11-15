@@ -122,29 +122,33 @@ export function MobileNav() {
 }
 
 export function Topbar({ meta }: { meta: ReturnType<typeof useFilters>['meta'] }) {
-  const { filters, regionName } = useFilters()
+  const { regionName } = useFilters()
   const live = meta.data_mode === 'real'
   return (
-    <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="eyebrow">Inteligencia geoespacial · Ecuador</p>
-        <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-          Focos de calor <span className="text-slateish">/</span> {regionName}
-        </h1>
-        <p className="mt-1 text-xs text-slateish">
-          {filters.start} → {filters.end} · MODIS y VIIRS armonizados
-        </p>
+    <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-ink-800/80 pb-3">
+      <div className="flex items-center gap-2.5 text-xs text-slateish">
+        <span className="font-semibold text-white">FuegoClaro</span>
+        <span className="text-ink-600">/</span>
+        <span className="text-slate-300 font-medium">Monitoreo Satelital Ecuador</span>
+        {regionName !== 'Ecuador' && (
+          <>
+            <span className="text-ink-600">/</span>
+            <span className="rounded-md border border-ember-400/30 bg-ember-500/15 px-2 py-0.5 text-[11px] font-bold text-ember-300">
+              {regionName}
+            </span>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         {/* Selector de Modo con alta visibilidad */}
         <ViewModeToggle />
 
-        <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850/80 px-3 py-1.5 text-[11px] text-slateish">
+        <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850/80 px-3 py-1 text-[11px] text-slateish">
           <span className={`h-2 w-2 rounded-full ${live ? 'bg-mint' : 'bg-amber-400'}`} />
-          {live ? 'Datos reales NASA FIRMS' : 'Modo muestra / sin datos'}
+          <span>{live ? 'NASA FIRMS' : 'Modo muestra'}</span>
           <span className="text-ink-500">|</span>
-          <span className="num text-[10px]">{meta.dataset_version ?? '—'}</span>
+          <span className="num text-[10px] text-slate-300">{meta.dataset_version ?? '—'}</span>
         </div>
       </div>
     </header>

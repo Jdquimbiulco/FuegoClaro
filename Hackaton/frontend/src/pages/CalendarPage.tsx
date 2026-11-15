@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader } from '../components/layout/Layout'
+import { FiltersBar } from '../components/layout/FiltersBar'
 import {
   Badge,
   Card,
@@ -121,11 +122,13 @@ export default function CalendarPage() {
         }
       />
 
+      <FiltersBar />
+
       {calendarState.error ? (
         <ErrorState message={calendarState.error} onRetry={calendarState.refetch} />
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="relative z-10 mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
               label="Total del mes"
               value={formatNumber(calendar?.total ?? 0)}
