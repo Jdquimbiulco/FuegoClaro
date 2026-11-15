@@ -17,12 +17,14 @@ from app.utils.json_safe import json_safe
 router = APIRouter(tags=["susceptibilidad"])
 
 
-def _map_meta(region_id: str | None, notes: list[str]) -> dict:
+def _map_meta(region_id: str | None, notes: list[str], window_days: int) -> dict:
     store = get_store()
     start, end = store.default_window()
     spec = FilterSpec(start_date=start, end_date=end, region_id=region_id or "all", sensor="all")
     payload = response_meta(store, spec, notes=notes)
-    map_path = get_settings().processed_dir / "susceptibility.json"
+    map_path = get_settings().susceptibility_dir / f"latest-h{window_days}.geojson"
+    if not map_path.exists() and window_days == 7:
+        map_path = get_settings().processed_dir / "susceptibility.json"
     payload["module"] = {
         "name": "susceptibility",
         "status": "available" if map_path.exists() else "pending",
@@ -34,15 +36,16 @@ def _map_meta(region_id: str | None, notes: list[str]) -> dict:
 
 @router.get("/susceptibility")
 def susceptibility_map(
-    level: str = Query("province", pattern="^(province|canton)$"),
+    level: str = Query("cell", pattern="^(cell|province|canton)$"),
     region_id: str | None = Query(None),
+    window_days: int = Query(7, ge=0, le=7),
     format: str = Query("geojson", pattern="^(geojson|json)$"),
 ) -> dict:
-    data = susceptibility_service.get_map(level=level, region_id=region_id)
+    data = susceptibility_service.get_map(level=level, region_id=region_id, window_days=window_days)
     payload = data.model_dump()
     if format == "json":
         payload.pop("type", None)
-    return json_safe({"meta": _map_meta(region_id, data.notes), "data": payload})
+    return json_safe({"meta": _map_meta(region_id, data.notes, window_days), "data": payload})
 
 
 @router.get("/susceptibility/point")

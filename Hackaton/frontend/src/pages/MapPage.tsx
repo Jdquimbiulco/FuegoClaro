@@ -1,4 +1,4 @@
-import type { FeatureCollection } from 'geojson'
+import type { FeatureCollection, Geometry } from 'geojson'
 import {
   ArrowRight,
   Building2,
@@ -12,7 +12,7 @@ import {
   Satellite,
   ShieldAlert,
 } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { FiresMap } from '../components/map/FiresMap'
 import { PageHeader } from '../components/layout/Layout'
@@ -28,8 +28,9 @@ import {
 import { useFilters } from '../context/FiltersContext'
 import { useApi } from '../hooks/useApi'
 import { formatNumber } from '../lib/format'
-import { exportUrl } from '../services/api'
-import type { DetectionsResponse } from '../types/api'
+import { exportUrl, withQuery } from '../services/api'
+import type { ApiEnvelope, DetectionsResponse, EnvironmentalAlertsData, ProtectedAreaProperties, SusceptibilityMapData } from '../types/api'
+import type { MapLayers } from '../components/map/FiresMap'
 
 const MAP_LIMIT = 20000
 
@@ -42,14 +43,29 @@ export default function MapPage() {
     return { coordinates: [lat, lon] as [number, number], name: params.get('event') || 'Evento seleccionado', demo: params.get('demo_event') === '1' }
   }, [params])
   const { meta, filters, apiPath, regionName, viewMode, setViewMode } = useFilters()
+  const [riskHorizon, setRiskHorizon] = useState(7)
+  const [layers, setLayers] = useState<MapLayers>({ detections: true, risk: true, protectedAreas: true, alerts: true })
   const detectionsState = useApi<DetectionsResponse>(
     apiPath('/detections', { limit: MAP_LIMIT, order: 'desc' }),
   )
   const geojsonState = useApi<FeatureCollection>('/regions/geojson')
+  const riskState = useApi<ApiEnvelope<SusceptibilityMapData>>(
+    layers.risk ? withQuery('/susceptibility', { level: 'cell', window_days: riskHorizon }) : null,
+  )
+  const protectedAreasState = useApi<ApiEnvelope<FeatureCollection<Geometry, ProtectedAreaProperties>>>('/protected-areas')
+  const alertsState = useApi<ApiEnvelope<EnvironmentalAlertsData>>(
+    layers.alerts ? apiPath('/environmental-alerts', { window_days: riskHorizon }) : null,
+  )
 
   const points = detectionsState.data?.data ?? []
   const total = detectionsState.data?.pagination.total ?? 0
   const truncated = total > points.length
+  const riskGeojson = useMemo<FeatureCollection | null>(() => {
+    const payload = riskState.data?.data
+    return payload ? { type: 'FeatureCollection', features: payload.features } : null
+  }, [riskState.data])
+  const protectedAreasGeojson = protectedAreasState.data?.data ?? null
+  const alerts = alertsState.data?.data.alerts ?? []
 
   const modisCount = points.filter((point) => point.sensor === 'MODIS').length
   const viirsCount = points.filter((point) => point.sensor === 'VIIRS').length
@@ -184,6 +200,14 @@ export default function MapPage() {
                 geojson={geojsonState.data}
                 loading={detectionsState.loading}
                 total={total}
+                riskGeojson={riskGeojson}
+                protectedAreasGeojson={protectedAreasGeojson}
+                alerts={alerts}
+                layers={layers}
+                onLayerChange={(key, value) => setLayers((current) => ({ ...current, [key]: value }))}
+                riskHorizon={riskHorizon}
+                onRiskHorizonChange={setRiskHorizon}
+                alertsLoading={alertsState.loading}
               />
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slateish">
                 <span>Fondo cartográfico: Esri World Canvas / Satellite / Topo (Sin marcas de agua)</span>
@@ -224,6 +248,17 @@ export default function MapPage() {
                         </span>
                       </li>
                     </ul>
+                  </Card>
+
+                  <Card>
+                    <SectionHeading eyebrow="Riesgo y ambiente" title="Alertas dinámicas" description="Cruce de riesgo predictivo y eventos críticos con el Sistema Nacional de Áreas Protegidas." />
+                    <div className="space-y-2 text-xs text-slateish">
+                      <p><span className="font-semibold text-white">{alerts.length}</span> alertas prioritarias para el horizonte de {riskHorizon} días.</p>
+                      <p>Las alertas no se almacenan: se recalculan con la capa de riesgo publicada.</p>
+                      {alerts.slice(0, 3).map((alert) => <div key={alert.id} className="rounded-lg border border-ember-400/30 bg-ember-500/10 p-2 text-ember-100"><strong>{alert.protected_area.name}</strong><br />{alert.title}</div>)}
+                      {riskState.error && <p className="text-amber-200">Capa predictiva no disponible: {riskState.error}</p>}
+                      {alertsState.error && <p className="text-amber-200">Alertas no disponibles: {alertsState.error}</p>}
+                    </div>
                   </Card>
 
                   <Card>

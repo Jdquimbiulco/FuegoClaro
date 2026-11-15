@@ -1,3 +1,5 @@
+import type { Feature, Geometry } from 'geojson'
+
 export type Sensor = 'MODIS' | 'VIIRS'
 export type ConfidenceLevel = 'low' | 'nominal' | 'high' | 'unknown'
 export type DataMode = 'real' | 'sample' | 'empty'
@@ -302,4 +304,58 @@ export interface ProvenanceResponse {
 export interface ApiEnvelope<T> {
   meta: ApiMeta
   data: T
+}
+
+export interface SusceptibilityProperties {
+  area_id: string
+  level: 'cell' | 'province' | 'canton'
+  latitude: number
+  longitude: number
+  province: string
+  province_id: string
+  region: string
+  region_id: string
+  is_galapagos: boolean
+  probability: number
+  risk_level: 'Bajo' | 'Medio' | 'Alto' | 'Extremo'
+  data_completeness: number
+  prediction_date: string
+  window_days: number
+  model_version: string | null
+}
+
+export interface SusceptibilityMapData {
+  level: string
+  type: 'FeatureCollection'
+  features: Feature<Geometry, SusceptibilityProperties>[]
+  model: Record<string, unknown>
+  risk_bands: Record<string, unknown>[]
+  summary: { by_risk?: Record<string, number>; generated_at?: string | null }
+  notes: string[]
+}
+
+export interface ProtectedAreaProperties {
+  area_id: string
+  name: string
+  category: string
+  subsystem: string
+  [key: string]: unknown
+}
+
+export interface EnvironmentalAlert {
+  id: string
+  type: 'predictive_environmental_risk' | 'observed_environmental_event'
+  priority: 'high' | 'critical'
+  title: string
+  coordinates: [number, number]
+  risk?: { cell_id: string; probability: number; level: string; window_days: number; prediction_date: string }
+  event?: { id: string; level: string; start: string | null; end: string | null; frp_total: number }
+  protected_area: { id: string; name: string; category: string; subsystem: string }
+  disclaimer: string
+}
+
+export interface EnvironmentalAlertsData {
+  alerts: EnvironmentalAlert[]
+  summary: { total: number; predictive: number; observed: number; critical: number }
+  notes: string[]
 }

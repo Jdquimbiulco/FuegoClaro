@@ -10,6 +10,18 @@ Usados por la mayoría de endpoints analíticos: `start_date` (YYYY-MM-DD), `end
 
 ## Endpoints
 
+### Riesgo y alerta ambiental
+
+| Método | Ruta | Descripción |
+| --- | --- | --- |
+| GET | `/susceptibility?level=cell&window_days=7` | Celdas de riesgo predictivo publicadas. |
+| GET | `/susceptibility/point?lat=...&lon=...&date=...&window_days=7` | Inferencia puntual. |
+| GET | `/protected-areas` | GeoJSON normalizado de áreas SNAP. |
+| GET | `/environmental-alerts?window_days=7` | Alertas efímeras por cruce de riesgo/eventos con SNAP. |
+
+Consulta [08-alertas-ambientales.md](08-alertas-ambientales.md) para la regla,
+limitaciones y frecuencia de actualización configurables.
+
 - `GET /health` — estado del servicio y dataset.
 - `GET /meta` — versión, modo (`real`/`sample`/`empty`), cobertura, sensores/productos, regiones/provincias, limitaciones.
 - `GET /regions` — regiones naturales y provincias.
