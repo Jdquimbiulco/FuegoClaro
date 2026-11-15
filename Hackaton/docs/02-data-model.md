@@ -36,6 +36,27 @@ El dataset publicado es `data/processed/detections.csv`, acompañado de `data/pr
 
 Incluye `dataset_version`, `generated_at`, `source`, `source_url`, `attribution`, `requested_period`, `bbox`, `sources` (producto, rango, registros), `availability`, `records` (conteos y exclusiones), `date_range`, `fields`, `transformations`, `limitations`, `file` (ruta, SHA-256, bytes) y `warnings`.
 
+## Dataset ML de riesgo
+
+`data/processed/ml/fire_risk_dataset.parquet` es un panel por **celda de 0.1° ×
+día local** con una fila por celda y fecha. Campos principales:
+
+| Grupo | Ejemplos |
+| --- | --- |
+| Claves | `cell_id`, `date`, `lat`, `lon`, `province_id`, `region_id`, `is_galapagos`. |
+| FIRMS/eventos | `det_count_*`, `frp_*`, `event_*`, lags y ventanas móviles. |
+| Vecindario | `det_sum_3x3_lag1`, `frp_sum_5x5_lag1`, `dist_nearest_fire_km`. |
+| Clima | `wx_temperature_2m_max_d0`, `wx_*_lag1`, `wx_*_roll7/30`, `dry_days`. |
+| DEM | `elevation_m`, `slope_deg`, `aspect_sin/cos`, `terrain_roughness`. |
+| NDVI | `ndvi_lag1`, `ndvi_age_days`, `ndvi_quality`, `ndvi_available`. |
+| Estáticos | `fire_freq_cell`, `fire_freq_province_month`, `dist_hist_fire_km`. |
+| Targets | `y_d0..y_d7`, `y_within_0..y_within_7`. |
+
+El manifiesto `fire_risk_dataset.meta.json` documenta grupos de variables,
+faltantes, conteos de positivos, parámetros y chequeos de fuga. Las variables
+de clima `_d0` solo se usan en el modelo de horizonte 0. Detalle completo en
+[`07-ml-risk.md`](07-ml-risk.md).
+
 ## Modos de datos
 
 - `real`: `data/processed/detections.csv` válido.
