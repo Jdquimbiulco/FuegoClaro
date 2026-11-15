@@ -8,9 +8,9 @@ import type { Detection } from '../../types/api'
 import { CONFIDENCE_LABELS, SENSOR_COLORS } from '../../lib/constants'
 import { escapeHtml, formatDecimal, formatNumber } from '../../lib/format'
 
-export type BasemapMode = 'dark' | 'satellite' | 'topo'
+type BasemapMode = 'dark' | 'satellite' | 'topo'
 
-export const BASEMAPS: Record<
+const BASEMAPS: Record<
   BasemapMode,
   {
     name: string
