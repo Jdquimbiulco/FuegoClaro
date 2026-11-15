@@ -193,6 +193,13 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
     if (minDate && filters.start === minDate) return 0
     return null
   }, [filters.end, filters.start, maxDate, minDate])
+  const selectableCantons = useMemo(() => {
+    if (filters.region === 'all') return meta.cantons
+    const provinceIds = meta.provinces
+      .filter((province) => province.id === filters.region || province.region_id === filters.region)
+      .map((province) => province.id)
+    return meta.cantons.filter((canton) => provinceIds.includes(canton.province_id))
+  }, [filters.region, meta.cantons, meta.provinces])
 
   return (
     <div
@@ -404,13 +411,13 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[1.4fr_1fr_1fr_1.1fr_1fr]">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[1.25fr_1.25fr_1fr_1fr_1.1fr_1fr]">
             <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Región / Provincia</span>
               <select
                 className={fieldClass}
                 value={filters.region}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) => update({ region: event.target.value })}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) => update({ region: event.target.value, canton: '' })}
               >
                 <option value="all">Ecuador (todo)</option>
                 <optgroup label="Regiones naturales">
@@ -430,6 +437,21 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
                       </option>
                     ))}
                 </optgroup>
+              </select>
+            </label>
+
+            <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Cantón</span>
+              <select
+                className={fieldClass}
+                value={filters.canton ?? ''}
+                onChange={(event: ChangeEvent<HTMLSelectElement>) => update({ canton: event.target.value })}
+              >
+                <option value="">Todos los cantones</option>
+                {selectableCantons
+                  .slice()
+                  .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+                  .map((canton) => <option key={canton.id} value={canton.id}>{canton.name} · {canton.province}</option>)}
               </select>
             </label>
 
@@ -508,6 +530,7 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
             {filters.confidence && (
               <span className="text-amber-200 font-medium">Filtro de confianza activo</span>
             )}
+            {filters.canton && <span className="text-mint font-medium">Cantón: {regionName}</span>}
           </div>
         </div>
       )}

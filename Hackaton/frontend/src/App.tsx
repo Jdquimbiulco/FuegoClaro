@@ -6,11 +6,9 @@ import { Layout } from './components/layout/Layout'
 import { ErrorState } from './components/ui/Primitives'
 import type { Meta } from './types/api'
 import DashboardPage from './pages/DashboardPage'
-import FiresPage from './pages/FiresPage'
 import MapPage from './pages/MapPage'
 import CalendarPage from './pages/CalendarPage'
 import ComparePage from './pages/ComparePage'
-import FindingsPage from './pages/FindingsPage'
 import MethodologyPage from './pages/MethodologyPage'
 import NotFoundPage from './pages/NotFoundPage'
 
@@ -36,7 +34,7 @@ function AnomaliesRedirect({ meta }: { meta: Meta }) {
   const params = new URLSearchParams(search)
   if (!params.get('start')) params.set('start', meta.default_window.start)
   if (!params.get('end')) params.set('end', meta.default_window.end)
-  return <Navigate to={`/hallazgos?${params.toString()}`} replace />
+  return <Navigate to={`/?${params.toString()}`} replace />
 }
 
 export default function App() {
@@ -70,11 +68,11 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
-        <Route path="incendios" element={<FiresPage />} />
+        <Route path="incendios" element={<Navigate to="/mapa" replace />} />
         <Route path="mapa" element={<MapPage />} />
         <Route path="calendario" element={<CalendarPage />} />
         <Route path="comparador" element={<ComparePage />} />
-        <Route path="hallazgos" element={<FindingsPage />} />
+        <Route path="hallazgos" element={<Navigate to="/" replace />} />
         <Route path="metodologia" element={<MethodologyPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

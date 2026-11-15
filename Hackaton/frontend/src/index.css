@@ -19,6 +19,62 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Paleta institucional: naranja #F5640A, oro #e6d37f, rojo #a00d0c y azul #46a3c8. */
+html[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f8f4e9;
+  --panel: #fffdf6;
+  --panel-2: #f3ead4;
+  --border: #d7c9a9;
+  --text: #182431;
+  --muted: #5f6871;
+  --ember: #f5640a;
+}
+
+html[data-theme='light'] body {
+  background:
+    radial-gradient(900px 500px at 15% -10%, rgba(245, 100, 10, 0.13), transparent 60%),
+    radial-gradient(800px 450px at 95% 0%, rgba(70, 163, 200, 0.10), transparent 55%),
+    var(--bg);
+}
+
+html[data-theme='light'] .bg-ink-900,
+html[data-theme='light'] .bg-ink-900\/80,
+html[data-theme='light'] .bg-ink-900\/90,
+html[data-theme='light'] .bg-ink-850,
+html[data-theme='light'] .bg-ink-850\/80,
+html[data-theme='light'] .bg-ink-850\/85,
+html[data-theme='light'] .bg-ink-850\/90,
+html[data-theme='light'] .bg-ink-800,
+html[data-theme='light'] .bg-ink-800\/40,
+html[data-theme='light'] .bg-ink-800\/50,
+html[data-theme='light'] .bg-ink-800\/60,
+html[data-theme='light'] .bg-ink-800\/70,
+html[data-theme='light'] .bg-ink-800\/80 {
+  background-color: var(--panel) !important;
+}
+html[data-theme='light'] .border-ink-700,
+html[data-theme='light'] .border-ink-700\/60,
+html[data-theme='light'] .border-ink-700\/70,
+html[data-theme='light'] .border-ink-700\/80,
+html[data-theme='light'] .border-ink-800,
+html[data-theme='light'] .border-ink-800\/80 {
+  border-color: var(--border) !important;
+}
+html[data-theme='light'] .text-white,
+html[data-theme='light'] .text-slate-100,
+html[data-theme='light'] .text-slate-200,
+html[data-theme='light'] .text-slate-300 {
+  color: #182431 !important;
+}
+html[data-theme='light'] .text-slateish,
+html[data-theme='light'] .text-slate-400 {
+  color: #5f6871 !important;
+}
+html[data-theme='light'] select option { background: #fffdf6; color: #182431; }
+html[data-theme='light'] input[type='date']::-webkit-calendar-picker-indicator { filter: none; }
+html[data-theme='light'] .leaflet-container { background: #dfe8e5; }
+
 * {
   box-sizing: border-box;
 }

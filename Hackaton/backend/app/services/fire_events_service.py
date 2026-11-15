@@ -36,6 +36,7 @@ def _cache_key(spec: FilterSpec) -> tuple:
         spec.start_date,
         spec.end_date,
         spec.region_id,
+        spec.canton_id,
         spec.sensor,
         tuple(spec.confidence),
         spec.daynight,
@@ -91,6 +92,10 @@ def _enrich(event: dict, evidence: pd.DataFrame, catalog: dict[str, dict]) -> Fi
     provinces = [catalog[value] for value in province_ids if value in catalog]
     first = provinces[0] if provinces else None
     center = tuple(float(value) for value in event["centro"])
+    canton = None
+    if not members.empty and "canton" in members:
+        values = members["canton"].dropna().astype(str)
+        canton = str(values.mode().iloc[0]) if not values.empty else None
     payload = {
         **event,
         "centro": center,
@@ -98,7 +103,7 @@ def _enrich(event: dict, evidence: pd.DataFrame, catalog: dict[str, dict]) -> Fi
         "province_names": [str(value["name"]) for value in provinces],
         "region_id": str(first["region_id"]) if first else None,
         "region": str(first["region"]) if first else None,
-        "canton": None,
+        "canton": canton,
         "confidence_by_level": counts,
         "confidence_dominant": dominant,
         "evidence_score_max": score,
@@ -195,6 +200,7 @@ def dashboard(
         start_date=historic_start or spec.start_date,
         end_date=historic_end or spec.end_date,
         region_id=spec.region_id,
+        canton_id=spec.canton_id,
         sensor=spec.sensor,
         confidence=spec.confidence,
         daynight=spec.daynight,

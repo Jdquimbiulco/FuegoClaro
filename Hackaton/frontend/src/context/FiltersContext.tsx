@@ -28,21 +28,14 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
   const location = useLocation()
 
   const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-    try {
-      const saved = localStorage.getItem('fuegoclaro_view_mode')
-      return saved === 'expert' ? 'expert' : 'basic'
-    } catch {
-      return 'basic'
-    }
+    return 'expert'
   })
 
   const setViewMode = useCallback((mode: ViewMode) => {
-    setViewModeState(mode)
-    try {
-      localStorage.setItem('fuegoclaro_view_mode', mode)
-    } catch {
-      // ignore storage errors
-    }
+    // Se conserva la firma para compatibilidad con vistas históricas; la
+    // aplicación opera exclusivamente en modo experto.
+    void mode
+    setViewModeState('expert')
   }, [])
 
   const toggleViewMode = useCallback(() => {
@@ -57,6 +50,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       sensor: (searchParams.get('sensor') as FilterState['sensor']) || 'all',
       confidence: searchParams.get('confidence') || '',
       provinces: searchParams.get('provinces') || '',
+      canton: searchParams.get('canton') || '',
     }),
     [meta.default_window.end, meta.default_window.start, searchParams],
   )
@@ -98,6 +92,8 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       else params.delete('confidence')
       if (next.provinces) params.set('provinces', next.provinces)
       else params.delete('provinces')
+      if (next.canton) params.set('canton', next.canton)
+      else params.delete('canton')
       setSearchParams(params, { replace: true })
     },
     [searchParams, setSearchParams],
@@ -130,17 +126,22 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       sensor: 'all',
       confidence: '',
       provinces: '',
+      canton: '',
     })
   }, [meta.default_window.end, meta.default_window.start, write])
 
   const regionName = useMemo(() => {
+    if (filters.canton) {
+      const canton = meta.cantons.find((item) => item.id === filters.canton)
+      if (canton) return `${canton.name} · ${canton.province}`
+    }
     if (filters.region === 'all') return 'Ecuador'
     const natural = meta.regions.find((region) => region.id === filters.region)
     if (natural) return natural.name
     const province = meta.provinces.find((item) => item.id === filters.region)
     if (province) return province.name
     return filters.region
-  }, [filters.region, meta.provinces, meta.regions])
+  }, [filters.canton, filters.region, meta.cantons, meta.provinces, meta.regions])
 
   const activeFilterCount = useMemo(() => {
     let count = 0
@@ -148,6 +149,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
     if (filters.sensor !== 'all') count += 1
     if (filters.confidence) count += 1
     if (filters.provinces) count += 1
+    if (filters.canton) count += 1
     if (
       filters.start !== meta.default_window.start ||
       filters.end !== meta.default_window.end
@@ -165,6 +167,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
         region_id: filters.region,
         sensor: filters.sensor,
         confidence: filters.confidence,
+        canton_id: filters.canton,
         ...extra,
       }),
     [filters],

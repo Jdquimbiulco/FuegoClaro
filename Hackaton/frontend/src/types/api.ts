@@ -31,6 +31,16 @@ export interface Province {
   count?: number
 }
 
+export interface Canton {
+  id: string
+  name: string
+  province_id: string
+  province: string
+  bbox: [number, number, number, number]
+  center: [number, number]
+  count?: number
+}
+
 export interface Meta {
   app: string
   version: string
@@ -46,6 +56,7 @@ export interface Meta {
   confidence_levels: ConfidenceLevel[]
   regions: Region[]
   provinces: Province[]
+  cantons: Canton[]
   attribution: string | null
   source: string | null
   limitations: string[]
@@ -60,6 +71,7 @@ export interface FilterState {
   sensor: 'all' | Sensor
   confidence: string
   provinces?: string
+  canton?: string
 }
 
 export interface Detection {
@@ -191,6 +203,14 @@ export interface CalendarData {
   end: string
   days: CalendarDay[]
   max_daily: number
+  total: number
+  notes: string[]
+}
+
+export interface CalendarYearData {
+  year: number
+  months: { month: string; number: number; total: number; intensity: number }[]
+  max_monthly: number
   total: number
   notes: string[]
 }

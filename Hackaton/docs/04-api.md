@@ -6,7 +6,11 @@ Todas las respuestas incluyen metadatos de procedencia/modo de datos cuando apli
 
 ## Filtros comunes
 
-Usados por la mayoría de endpoints analíticos: `start_date` (YYYY-MM-DD), `end_date`, `region_id` (natural o provincia, `all`/`ecuador`), `sensor` (`MODIS`|`VIIRS`), `confidence` (nivel normalizado), `daynight` (`D`|`N`), `min_frp`.
+Usados por la mayoría de endpoints analíticos: `start_date` (YYYY-MM-DD), `end_date`, `region_id` (natural o provincia, `all`/`ecuador`), `canton_id` (código DPA oficial), `sensor` (`MODIS`|`VIIRS`), `confidence` (nivel normalizado), `daynight` (`D`|`N`), `min_frp`.
+
+`canton_id` se valida contra el catálogo de 224 cantones publicado en `/meta`
+o `/regions`. Puede combinarse con `region_id`; ambos filtros se aplican por
+intersección.
 
 ## Endpoints
 
@@ -23,15 +27,15 @@ Consulta [08-alertas-ambientales.md](08-alertas-ambientales.md) para la regla,
 limitaciones y frecuencia de actualización configurables.
 
 - `GET /health` — estado del servicio y dataset.
-- `GET /meta` — versión, modo (`real`/`sample`/`empty`), cobertura, sensores/productos, regiones/provincias, limitaciones.
-- `GET /regions` — regiones naturales y provincias.
+- `GET /meta` — versión, modo (`real`/`sample`/`empty`), cobertura, sensores/productos, regiones/provincias/cantones, limitaciones.
+- `GET /regions` — regiones naturales, provincias y cantones con sus conteos.
 - `GET /regions/geojson` — geometrías provinciales para el mapa.
 - `GET /provenance` — manifiesto, hashes, transformaciones y fuentes.
 - `GET /detections` — detecciones filtradas. `limit`, `offset`, `order` (`asc`/`desc`), `format` (`json`|`geojson`).
 - `GET /detections/{id}` — detalle por id.
 - `GET /stats/summary` — indicadores del periodo.
 - `GET /stats/timeseries` — `granularity=day|week|month`.
-- `GET /calendar` — `month=YYYY-MM`.
+- `GET /calendar` — `month=YYYY-MM` para detalle diario o `year=YYYY` para estacionalidad mensual.
 - `GET /comparison` — comparación MODIS/VIIRS, `granularity=day|week|month`.
 - `GET /anomalies` — `threshold`, `window_days`, `min_observed`, `fdr_alpha`, `max_results`.
 - `GET /insights` — hallazgos deterministas trazables.

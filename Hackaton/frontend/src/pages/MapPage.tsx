@@ -1,6 +1,5 @@
 import type { FeatureCollection, Geometry } from 'geojson'
 import {
-  ArrowRight,
   Building2,
   Compass,
   Download,
@@ -13,12 +12,11 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { FiresMap } from '../components/map/FiresMap'
 import { PageHeader } from '../components/layout/Layout'
 import { FiltersBar } from '../components/layout/FiltersBar'
 import {
-  Badge,
   Card,
   ErrorState,
   Notice,
@@ -71,6 +69,8 @@ export default function MapPage() {
   const viirsCount = points.filter((point) => point.sensor === 'VIIRS').length
 
   const bbox = useMemo<[number, number, number, number] | null>(() => {
+    const canton = meta.cantons.find((item) => item.id === filters.canton)
+    if (canton) return canton.bbox
     if (filters.region === 'all') {
       if (!meta.regions.length) return null
       return meta.regions.reduce<[number, number, number, number]>(
@@ -87,14 +87,16 @@ export default function MapPage() {
     if (province) return province.bbox
     const region = meta.regions.find((item) => item.id === filters.region)
     return region?.bbox ?? null
-  }, [filters.region, meta.provinces, meta.regions])
+  }, [filters.canton, filters.region, meta.cantons, meta.provinces, meta.regions])
 
   const highlighted = useMemo(() => {
+    const canton = meta.cantons.find((item) => item.id === filters.canton)
+    if (canton) return canton
     if (filters.region === 'all') return null
     return meta.regions.find((item) => item.id === filters.region) ??
       meta.provinces.find((item) => item.id === filters.region) ??
       null
-  }, [filters.region, meta.provinces, meta.regions])
+  }, [filters.canton, filters.region, meta.cantons, meta.provinces, meta.regions])
 
   const isBasic = viewMode === 'basic'
 
@@ -135,18 +137,13 @@ export default function MapPage() {
         }
       />
 
-      {/* Banner de Acceso a Incendios */}
+      {/* Feed operacional: las alertas se recalculan, no se persisten. */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ember-400/30 bg-gradient-to-r from-ember-500/15 via-ember-500/10 to-transparent p-3 text-xs">
         <div className="flex items-center gap-2.5 text-slate-200">
           <ShieldAlert size={16} className="text-ember-400 shrink-0" />
-          <span>¿Buscas polígonos de incendios reales delimitados y alertas críticas de emergencia?</span>
+          <span><strong>{alerts.length}</strong> alertas ambientales priorizadas para el horizonte predictivo de {riskHorizon} días.</span>
         </div>
-        <Link
-          to="/incendios"
-          className="inline-flex items-center gap-1 font-bold text-ember-300 hover:text-white transition"
-        >
-          Ver Módulo de Incendios <ArrowRight size={12} />
-        </Link>
+        <span className="text-slateish">Cruza riesgo predictivo y áreas protegidas; no representa incendios confirmados.</span>
       </div>
 
       <FiltersBar />
@@ -190,7 +187,7 @@ export default function MapPage() {
             />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
+          <div className="grid gap-4">
             <div>
               {focus && <div className="mb-2 rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-xs text-amber-100">{focus.demo ? 'Ubicación de demostración' : 'Evento seleccionado'}: {focus.name}. El marcador amarillo identifica el centro del evento.</div>}
               <FiresMap
@@ -361,34 +358,6 @@ export default function MapPage() {
                         El mapa renderiza las {formatNumber(points.length)} detecciones más recientes para optimizar WebGL/Leaflet.
                       </div>
                     )}
-                  </Card>
-
-                  <Card>
-                    <SectionHeading eyebrow="Filtros" title="Vista actual" />
-                    <div className="space-y-1.5 text-[11px] text-slateish">
-                      <p>
-                        Región: <span className="text-slate-200">{regionName}</span>
-                      </p>
-                      <p>
-                        Periodo:{' '}
-                        <span className="num text-slate-200">
-                          {filters.start} → {filters.end}
-                        </span>
-                      </p>
-                      <p>
-                        Sensor:{' '}
-                        <span className="text-slate-200">
-                          {filters.sensor === 'all' ? 'MODIS + VIIRS' : filters.sensor}
-                        </span>
-                      </p>
-                      <p>
-                        Calidad: <span className="text-slate-200">{filters.confidence || 'todas'}</span>
-                      </p>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      <Badge tone="positive">Datos NASA FIRMS</Badge>
-                      <Badge tone="neutral">{meta.data_mode === 'real' ? 'Dataset real' : 'Muestra'}</Badge>
-                    </div>
                   </Card>
 
                   {geojsonState.error && (

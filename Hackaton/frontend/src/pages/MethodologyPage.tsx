@@ -33,22 +33,22 @@ import type { ProvenanceResponse } from '../types/api'
 const SIMPLE_STEPS = [
   {
     title: 'Seleccionar el contexto de la consulta',
-    detail: 'El análisis comienza con los filtros de la página: periodo, territorio, sensor y calidad de las detecciones. Estos criterios delimitan los registros que consultan las vistas analíticas. El selector Público General muestra una lectura resumida; Modo Experto añade desgloses y métricas técnicas sobre esos datos.',
-    result: 'Antes de interpretar un indicador, revisa el periodo, la región y los filtros activos. El perfil cambia la presentación, no la fuente de los registros.',
+    detail: 'El análisis comienza con filtros expertos: periodo, región o provincia, cantón, sensor y calidad. Estos criterios delimitan exactamente los registros que consulta cada vista.',
+    result: 'Antes de interpretar un indicador, revisa el periodo, el territorio —incluido el cantón cuando corresponda— y los filtros activos.',
   },
   {
     title: 'Dashboard: conocer el panorama del periodo',
-    detail: 'El panel reúne el total de detecciones, su evolución mensual y su distribución territorial. Calculamos estos valores agrupando los registros por fecha local, provincia, región y sensor. En Modo Experto se añaden la distribución de confianza, las mediciones de FRP y las observaciones recientes. Seleccionar una provincia o región permite enfocar el análisis en ese territorio.',
+    detail: 'El panel reúne el total de detecciones, su evolución mensual y su distribución territorial. Calculamos estos valores agrupando los registros por fecha local, provincia, cantón, región y sensor. Incluye la distribución de confianza, FRP, observaciones recientes y el ranking de provincias con más eventos.',
     result: 'Puedes reconocer cuándo se concentran las detecciones y qué territorios aportan más registros al periodo consultado.',
   },
   {
     title: 'Mapa: localizar las observaciones',
-    detail: 'Situamos cada detección mediante sus coordenadas y mostramos las geometrías provinciales como referencia. La consulta aplica los filtros activos y carga hasta 20.000 registros, ordenados desde los más recientes. Los puntos permiten explorar la distribución espacial; el modo experto incorpora información técnica y la descarga de datos.',
+    detail: 'Situamos cada detección mediante sus coordenadas y mostramos geometrías administrativas como referencia. La consulta aplica los filtros activos y carga hasta 20.000 registros, ordenados desde los más recientes. El mapa integra el riesgo predictivo por cuadrícula, áreas protegidas y un feed de alertas calculadas en tiempo de consulta.',
     result: 'Puedes ubicar las observaciones. Si la consulta supera el límite de carga, los puntos visibles no representan todos los registros del periodo.',
   },
   {
     title: 'Calendario: revisar la actividad día por día',
-    detail: 'El calendario consulta el mes que seleccionas y agrupa las detecciones por día local. El color de cada celda representa su cantidad relativa dentro del mes. Al seleccionar una fecha aparece el detalle del día; en Modo Experto también se distingue el aporte de MODIS y VIIRS. El promedio mensual divide el total entre todos los días del mes.',
+    detail: 'El calendario permite una lectura diaria y otra mensual para observar estacionalidad. El color de cada celda representa su cantidad relativa en la ventana elegida. Al seleccionar una fecha se abre su detalle y puede enviarse al mapa con ese mismo filtro.',
     result: 'Puedes encontrar los días con mayor conteo y examinarlos individualmente. Una celda sin registros no permite determinar por sí sola la causa de esa ausencia.',
   },
   {
@@ -57,18 +57,13 @@ const SIMPLE_STEPS = [
     result: 'Puedes comprobar cuánto aporta cada sensor y cómo varía su comportamiento en el tiempo, sin convertir la proporción entre conteos en una proporción de superficie afectada.',
   },
   {
-    title: 'Hallazgos: explicar los resultados calculados',
-    detail: 'Esta sección combina el total de detecciones, el número de hallazgos, el periodo analizado y una gráfica mensual. Las tarjetas se redactan mediante plantillas que incorporan los cálculos del backend: volumen, diferencias entre sensores, picos temporales y otros patrones disponibles. La vista resumida facilita la lectura y la experta permite revisar más detalle y descargar evidencia.',
-    result: 'Puedes relacionar las explicaciones con las cifras del periodo seleccionado. Cuando los filtros no devuelven datos, la página muestra un estado sin hallazgos.',
-  },
-  {
-    title: 'Incendios: consultar el centro de mando',
-    detail: 'El centro de mando reúne indicadores, un feed ordenado por severidad, comparación MODIS–VIIRS, distribución provincial y un mapa de calor mensual. Los filtros permiten combinar fechas, varias provincias, sensor y confianza. Cada tarjeta incluye ubicación, FRP, cantidad de focos y un botón para enfocar el evento en el mapa.',
-    result: 'Si el servicio de eventos aún no está disponible, la pantalla identifica sus ejemplos como datos de demostración. Los indicadores de confirmación y riesgo cantonal quedan sin datos hasta recibir las fuentes correspondientes.',
+    title: 'Riesgo predictivo y alertas ambientales',
+    detail: 'El modelo de susceptibilidad produce una probabilidad por celda para un horizonte configurable. Las alertas cruzan esas celdas con áreas protegidas; se regeneran al consultar, no se almacenan ni equivalen a incendios confirmados.',
+    result: 'Puedes priorizar revisión territorial cuando una predicción alta o extrema intersecta una zona ambiental protegida.',
   },
   {
     title: 'Metodología: comprobar cómo se obtuvieron las cifras',
-    detail: 'En esta página reunimos las fuentes de NASA FIRMS, las diferencias entre sensores y los criterios usados para interpretar los resultados. El anexo técnico detalla la descarga, normalización, asignación geográfica, validación y análisis estadístico. También permite consultar la versión, el archivo y la huella del conjunto de datos cuando el manifiesto está disponible.',
+    detail: 'En esta página reunimos las fuentes de NASA FIRMS, el modelo predictivo, el cruce ambiental y los criterios usados para interpretar los resultados. El anexo técnico detalla descarga, normalización, asignación geográfica provincial y cantonal, validación y análisis estadístico.',
     result: 'Puedes pasar de lo que ves en una pantalla a la explicación del cálculo y a la procedencia de los datos utilizados.',
   },
 ]
@@ -108,12 +103,12 @@ const PIPELINE = [
   {
     title: 'Filtro geográfico',
     detail:
-      'Cada punto se cruza con las geometrías provinciales de Ecuador (Natural Earth 1:10m). Los puntos fuera del territorio se excluyen y se contabilizan en el manifiesto.',
+      'Cada punto se cruza con geometrías provinciales y cantones oficiales CONALI/Ministerio de Gobierno. Los puntos fuera del territorio se excluyen y se contabilizan en el manifiesto.',
   },
   {
-    title: 'Provincia y región',
+    title: 'Provincia, cantón y región',
     detail:
-      'Se asigna provincia y región natural (Costa, Sierra, Amazonía, Galápagos) por contención geométrica. No se infiere ubicación por centroides ni por cercanía.',
+      'Se asigna provincia, cantón y región natural (Costa, Sierra, Amazonía, Galápagos) por contención geométrica. No se infiere ubicación por centroides ni por cercanía.',
   },
   {
     title: 'Hora local y validación',
@@ -123,7 +118,7 @@ const PIPELINE = [
   {
     title: 'Agregación y análisis',
     detail:
-      'Conteos diarios por región y sensor; series, calendario, comparación, anomalías con z-score y FDR, y hallazgos deterministas. Ningún valor se rellena artificialmente.',
+      'Conteos diarios por región, provincia, cantón y sensor; series, calendario diario/mensual y comparación. El riesgo predictivo y las alertas ambientales se calculan de manera reproducible sin persistir alertas.',
   },
 ]
 
@@ -148,10 +143,10 @@ const ENDPOINTS = [
   ['GET', '/api/v1/detections', 'Detecciones paginadas o GeoJSON'],
   ['GET', '/api/v1/stats/summary', 'Indicadores del periodo filtrado'],
   ['GET', '/api/v1/stats/timeseries', 'Serie diaria, semanal o mensual'],
-  ['GET', '/api/v1/calendar', 'Calendario mensual por día local'],
+  ['GET', '/api/v1/calendar', 'Calendario diario o estacionalidad mensual'],
   ['GET', '/api/v1/comparison', 'Comparación MODIS vs VIIRS'],
-  ['GET', '/api/v1/anomalies', 'Anomalías con z-score y FDR'],
-  ['GET', '/api/v1/insights', 'Hallazgos deterministas'],
+  ['GET', '/api/v1/susceptibility', 'Riesgo predictivo por cuadrícula'],
+  ['GET', '/api/v1/environmental-alerts', 'Alertas de riesgo en áreas protegidas'],
   ['GET', '/api/v1/export/detections.csv', 'Exportación de detecciones filtradas'],
 ]
 
