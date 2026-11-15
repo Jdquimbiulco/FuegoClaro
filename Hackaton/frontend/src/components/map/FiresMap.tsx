@@ -1,5 +1,6 @@
 import L from 'leaflet'
 import 'leaflet.markercluster'
+import { Flame, Maximize2, Moon, Mountain, Satellite } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { FeatureCollection } from 'geojson'
 import { CircleMarker, Popup, GeoJSON, MapContainer, ScaleControl, TileLayer, ZoomControl, useMap } from 'react-leaflet'
@@ -322,7 +323,11 @@ export function FiresMap({
         )}
 
         <ClusterLayer points={points} />
-        {focus ? <FocusEvent focus={focus} /> : <FitBounds bbox={bbox} />}
+        {focus ? (
+          <FocusEvent key={`focus-${resetNonce}`} focus={focus} />
+        ) : (
+          <FitBounds key={`bounds-${resetNonce}`} bbox={bbox} />
+        )}
         <ZoomControl position="bottomright" />
         <ScaleControl position="bottomleft" imperial={false} />
       </MapContainer>
