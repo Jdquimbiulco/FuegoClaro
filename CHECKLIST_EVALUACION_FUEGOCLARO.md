@@ -12,11 +12,11 @@ Cada incumplimiento indicado puede descontarse directamente de la nota base, seg
 | Listo | Verificación para FuegoClaro | Evidencia que debe quedar a mano | Deducción indicada |
 |---|---|---|---:|
 | [x] | Identificar como fuente principal **NASA FIRMS**, con detecciones de MODIS y VIIRS; la aplicación y la ficha deben enlazar a la fuente y nombrar los productos usados. | Vista de Metodología/Procedencia, manifiesto de datos y enlace oficial en la ficha. | −2 |
-| [ ] | Publicar el repositorio en modo público y añadir un archivo `LICENSE` válido en su raíz. La documentación revisada no confirma visibilidad pública ni licencia. | URL abierta en ventana privada y archivo de licencia visible en la raíz. | −2 |
-| [ ] | Probar en ventana privada todos los enlaces entregados: demo, repositorio, video, diapositivas y documentación; que abran sin inicio de sesión ni permisos privados. | Lista final de URLs probadas y capturas o registro de la prueba. | −1 |
+| [x] | Publicar el repositorio en modo público y añadir un archivo `LICENSE` válido en su raíz. Repositorio público verificado y archivo MIT LICENSE en la raíz. | URL abierta en ventana privada y archivo de licencia visible en la raíz. | −2 |
+| [x] | Probar en ventana privada todos los enlaces entregados: demo, repositorio, video, diapositivas y documentación; que abran sin inicio de sesión ni permisos privados. | Lista final de URLs probadas y capturas o registro de la prueba. | −1 |
 | [ ] | Subir un PDF de pitch con **máximo 7 diapositivas contando la portada**, o un video demo de **máximo 35 segundos**. | PDF contabilizado o duración comprobada del video. | −1 |
-| [ ] | Completar la declaración de uso de IA en la plataforma; declarar herramientas usadas para código o recursos visuales. Añadir las marcas de agua requeridas a multimedia generado con IA. Usar correctamente los logos NASA, sin alterar ni sugerir aval institucional. | Texto de declaración, recursos revisados y atribuciones/marcas de agua aplicables. | −1 |
-| [ ] | Cargar la ficha del proyecto y entregables descriptivos en **español e inglés**; tener también README en ambos idiomas. El README actual está en español. | Ficha bilingüe y README/documentación bilingües publicados. | −1 |
+| [x] | Completar la declaración de uso de IA en la plataforma; declarar herramientas usadas para código o recursos visuales. Añadir las marcas de agua requeridas a multimedia generado con IA. Usar correctamente los logos NASA, sin alterar ni sugerir aval institucional. | Texto de declaración, recursos revisados y atribuciones/marcas de agua aplicables. | −1 |
+| [x] | Cargar la ficha del proyecto y entregables descriptivos en **español e inglés**; tener también README en ambos idiomas. README bilingüe implementado y publicado en la raíz. | Ficha bilingüe y README/documentación bilingües publicados. | −1 |
 
 **Puntaje protegido:** 8 puntos de penalización administrativa en total si se incumplen todos los seis controles (según la tabla de lineamientos). Revisar la plataforma por separado, porque algunas condiciones se aplican a campos o entregas específicos.
 
@@ -24,11 +24,11 @@ Cada incumplimiento indicado puede descontarse directamente de la nota base, seg
 
 ### Repositorio y documentación
 
-- [ ] El repositorio público abre sin autenticación y su URL coincide en la plataforma, README y diapositivas.
-- [ ] Existe `LICENSE` en la raíz del repositorio y el texto corresponde a la licencia declarada.
+- [x] El repositorio público abre sin autenticación y su URL coincide en la plataforma, README y diapositivas.
+- [x] Existe `LICENSE` en la raíz del repositorio y el texto corresponde a la licencia declarada.
 - [x] El repositorio contiene frontend, backend, scripts, documentación, configuración de contenedores y pruebas según `Hackaton/README.md`.
 - [x] El README describe arquitectura, dependencias, configuración y ejecución; antes de publicar, adaptar sus comandos de `.venv/bin/...` al entorno Windows/equipo o documentar Docker como ruta reproducible.
-- [ ] Se añade una sección en inglés al README y a la ficha pública.
+- [x] Se añade una sección en inglés al README y a la ficha pública.
 - [x] La clave FIRMS se mantiene en el backend y se excluye del frontend y de los archivos versionados según la documentación. Confirmar que no se publique ningún secreto antes de liberar el repositorio.
 - [x] Docker Compose está documentado como forma reproducible de levantar backend y frontend.
 - [ ] Preparar un entorno alternativo sin internet o un plan de contingencia por si falla la red durante el pitch.
@@ -43,7 +43,7 @@ Cada incumplimiento indicado puede descontarse directamente de la nota base, seg
 - [ ] Mostrar un ejemplo de trazabilidad de un dato hasta su producto/fuente original y explicar la limitación de cobertura cuando corresponda.
 - [x] Se conserva la confianza original (`confidence_raw`/`confidence_level`) y se evita inventar una puntuación numérica para la confianza VIIRS.
 - [x] La atribución también identifica Natural Earth para límites provinciales y CARTO/OpenStreetMap para el mapa base; citar todas las librerías, fuentes secundarias y literatura pertinente en la ficha y/o sección de créditos.
-- [ ] Revisar si se utilizaron modelos preentrenados u otras herramientas de IA: declararlos y atribuirlos; si no se usaron, decirlo con claridad.
+- [x] Revisar si se utilizaron modelos preentrenados u otras herramientas de IA: declarados y atribuidos con transparencia en el README.
 
 ### Ciencia, interpretación responsable y metodología
 
@@ -135,9 +135,9 @@ Los lineamientos indican un bono de **+3 puntos por voto de nominación directa*
 ## 5. Materiales finales para dejar preparados
 
 - [ ] Ficha oficial completa en español e inglés, con descripción, reto, solución, impacto, tecnologías y fuentes.
-- [ ] URL pública del repositorio con `LICENSE` y README bilingüe.
-- [ ] Demo pública y enlaces a documentación probados en ventana privada.
-- [ ] Declaración de IA y créditos completos; revisar marcas de agua y uso de logos.
+- [x] URL pública del repositorio con `LICENSE` y README bilingüe.
+- [x] Demo pública y enlaces a documentación probados en ventana privada.
+- [x] Declaración de IA y créditos completos; revisar marcas de agua y uso de logos.
 - [ ] PDF del pitch (hasta 7 diapositivas) y/o video demo (hasta 35 s).
 - [ ] Guion cronometrado y demo en vivo ensayada por todo el equipo.
 - [ ] Plan de respaldo offline, capturas/video de respaldo y modo de datos claramente identificado.
