@@ -2,10 +2,11 @@
 
 [![NASA Space Apps Challenge 2026](https://img.shields.io/badge/NASA%20Space%20Apps-Sangolqu%C3%AD%202026-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![Release: v1.0.0](https://img.shields.io/badge/Release-v1.0.0-orange?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Jdquimbiulco/FuegoClaro/releases)
 [![Frontend en Vivo](https://img.shields.io/badge/Frontend-fuegoclaro--frontend.onrender.com-brightgreen?style=for-the-badge&logo=render&logoColor=white)](https://fuegoclaro-frontend.onrender.com)
 [![Backend API](https://img.shields.io/badge/Backend%20API-FastAPI%20%C2%B7%20Docker-blue?style=for-the-badge&logo=fastapi&logoColor=white)](https://fuegoclaro-backend.onrender.com/api/v1/health)
 
-> **Plataforma de armonización, exploración y análisis predictivo de focos de calor satelitales (NASA FIRMS MODIS & VIIRS) en Ecuador.**  
+> **Plataforma de armonización, exploración, alertas ambientales y análisis predictivo de focos de calor satelitales (NASA FIRMS MODIS & VIIRS) en Ecuador.**  
 > *Desarrollado para el reto oficial de NASA Space Apps Challenge 2026: Harmonization of MODIS and VIIRS Hot Spots.*
 
 ---
@@ -35,7 +36,7 @@
   - [About FuegoClaro](#-about-fuegoclaro)
   - [Key Features](#-key-features)
   - [System Architecture](#-system-architecture)
-  - [Docker Reproduction](#-docker-quickstart)
+  - [Docker Quickstart](#-docker-quickstart)
   - [Data Sources & Attribution](#-data-sources--attribution)
   - [AI Usage Declaration](#-ai-usage-declaration)
   - [License](#-license)
@@ -54,26 +55,28 @@
 
 ## 🌟 ¿Qué es FuegoClaro?
 
-**FuegoClaro** es una solución integral diseñada para democratizar y contextualizar el monitoreo de anomalías térmicas en el territorio ecuatoriano (sus 24 provincias y 4 regiones naturales, incluyendo Galápagos).
+**FuegoClaro** es una solución científica e interactiva para el monitoreo y análisis de anomalías térmicas en el territorio ecuatoriano (sus 24 provincias, 4 regiones naturales y cantones, incluyendo Galápagos).
 
-El sistema ingesta más de **116.000 detecciones históricas y en tiempo casi real de NASA FIRMS (2022–2026)**, aplicando un pipeline científico de normalización territorial, detección estadística de anomalías (z-score + control de tasa de falso descubrimiento FDR Benjamini–Hochberg), y un **modelo predictivo de machine learning** (ST-DBSCAN + Gradient Boosting) para estimar el riesgo de fuego a horizontes de 0 a 7 días.
+El sistema ingesta más de **116.000 detecciones históricas y en tiempo casi real de NASA FIRMS (2022–2026)**, aplicando un pipeline de normalización territorial, detección estadística de anomalías (z-score + control de tasa de falso descubrimiento FDR Benjamini–Hochberg), clustering espaciotemporal de eventos de incendio (ST-DBSCAN), cruce de alertas con **Áreas Protegidas del SNAP**, y un **modelo predictivo de Machine Learning** para generar mapas de susceptibilidad a horizontes de 0 a 7 días.
 
 ---
 
 ## 🚀 Características Principales
 
-- 👥 **Experiencia de Usuario Adaptativa (Doble Perfil):**
-  - **Modo Ciudadano:** Lenguaje comprensible, semáforo de riesgo territorial, sin tecnicismos espaciales confusos y recomendaciones directas ante emergencias (ECU 911).
-  - **Modo Experto:** Telemetría orbital completa, bimodalidad MODIS vs VIIRS, desglose de radiancia espectral (FRP en MW), control algorítmico de confianza y exportación de datos canónicos en CSV.
-- 🗺️ **Mapa Interactivo Multicapa con Esri Basemaps:**
-  - Mapas base sin marcas de agua: *Oscuro Canvas*, *Satélite de Alta Resolución* y *Relieve Topográfico*.
-  - Agrupamiento dinámico (*MarkerClusters*) con gradientes radiantes térmicos y filtrado por polígonos provinciales.
-- 📊 **Radar Estadístico de Anomalías:**
-  - Detección rigurosa de desviaciones térmicas respecto a líneas base históricas de 4 años, con cálculo de *p-valor* y ajuste FDR para eliminar falsas alarmas estadísticas.
-- 🤖 **Modelo Predictivo de Riesgo Espaciotemporal (ML):**
-  - Predicción de probabilidad de fuego por celda de 0.1° × día mediante Gradient Boosting entrenado con variables satelitales, meteorológicas (Open-Meteo) y topográficas (DEM).
-- 📅 **Calendario Fenológico y Comparador Bimodal:**
-  - Vista mensual por día solar local (UTC-5 continental, UTC-6 Galápagos) y comparativa directa de captura sensor a sensor.
+- 🗺️ **Filtro Jerárquico Territorial y Cantonal:**
+  - Filtrado integral a nivel de **País (Ecuador)**, **4 Regiones Naturales** (Costa, Sierra, Amazonía, Galápagos), **24 Provincias** y **Cantones** mediante polígonos GeoJSON oficiales.
+- 🛡️ **Alertas Ambientales y Áreas Protegidas (SNAP):**
+  - Módulo de alerta temprana que cruza anomalías térmicas en tiempo real con reservas ecológicas, parques nacionales protegidos y mecheros petroleros para priorizar ecosistemas vulnerables.
+- 🔮 **Mapas de Susceptibilidad y Riesgo Predictivo (ML a 0–7 días):**
+  - Predicción espacial de riesgo por celda de 0.1° × día (artefactos GeoJSON para horizontes de hoy, 24h, 72h y 7 días), combinando clustering ST-DBSCAN con clima (Open-Meteo) y topografía (DEM).
+- 🛰️ **Telemetría Orbital y Armonización MODIS vs VIIRS:**
+  - Selector bimodal de sensores, filtrado por calidad algorítmica de confianza NASA (baja, nominal, alta) y análisis de potencia radiativa de fuego (FRP en MW) sin inventar scores artificiales.
+- 🗺️ **Cartografía Multicapa con Esri Basemaps:**
+  - Mapas interactivos sin marcas de agua (*Oscuro Canvas*, *Satélite de Alta Resolución* y *Relieve Topográfico*), con agrupamiento dinámico de calor radiante (*MarkerClusters*) y popups detallados.
+- 📊 **Radar Estadístico de Anomalías y Hallazgos:**
+  - Detección rigurosa de desviaciones térmicas respecto a líneas base históricas de 4 años, con z-score y ajuste FDR Benjamini–Hochberg para eliminar falsas alarmas estadísticas.
+- 📅 **Calendario Fenológico y Eventos de Incendio:**
+  - Vista mensual por día solar local (UTC-5 continental, UTC-6 Galápagos) y agregación de detecciones en eventos coherentes (`/fire-events`).
 
 ---
 
@@ -82,12 +85,12 @@ El sistema ingesta más de **116.000 detecciones históricas y en tiempo casi re
 ```mermaid
 flowchart TD
     A["NASA FIRMS API\n(MODIS & VIIRS)"] --> B["Pipeline ETL / Ingesta\n(scripts/ingest_firms.py)"]
-    C["Natural Earth\n(Límites 1:10m)"] --> B
-    D["Open-Meteo & DEM\n(Clima y Elevación)"] --> E["Dataset ML & ST-DBSCAN\n(scripts/build_fire_risk_dataset.py)"]
+    C["Natural Earth & Cantones\n(Límites GeoJSON)"] --> B
+    D["Open-Meteo, DEM & SNAP\n(Clima, Altitud, Áreas Protegidas)"] --> E["Dataset ML, ST-DBSCAN & Susceptibilidad\n(scripts/build_fire_risk_dataset.py)"]
     B --> F["Almacén Canónico\n(detections.csv + manifest.json)"]
     F --> G["FastAPI Backend\n(Port 8000)"]
     E --> G
-    G --> H["API REST & CORS\n(/stats, /fires, /anomalies, /ml)"]
+    G --> H["API REST & CORS\n(/stats, /fires, /anomalies, /susceptibility, /environmental)"]
     H --> I["React 19 + Vite Frontend\n(Port 5173 / CDN)"]
 ```
 
@@ -123,7 +126,7 @@ docker compose up --build
 | Recurso | Proveedor / Fuente | Uso en FuegoClaro |
 |---|---|---|
 | **Detecciones Térmicas** | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) | Focos de calor MODIS (Collection 6.1) y VIIRS (375 m NOAA-20), en productos SP y NRT. |
-| **Límites Administrativos** | [Natural Earth (1:10m)](https://www.naturalearthdata.com/) | Geometrías oficiales de las 24 provincias y regiones naturales de Ecuador. |
+| **Límites Administrativos** | [Natural Earth (1:10m)](https://www.naturalearthdata.com/) e IGM | Geometrías de las 24 provincias, regiones naturales y cantones de Ecuador. |
 | **Mapas Base (Cartografía)** | [Esri Basemaps](https://www.esri.com/) / OpenStreetMap | Capas base Dark Canvas, World Imagery y World Topo Map. |
 | **Áreas Protegidas** | SNAP / Ministerio del Ambiente de Ecuador (MAATE) | Identificación de riesgo sobre reservas ecológicas y mecheros petroleros. |
 | **Meteorología y DEM** | Open-Meteo & NASA SRTM | Factores climáticos de sequía y altitud para el modelo de riesgo ML. |
@@ -167,24 +170,26 @@ Proyecto desarrollado con dedicación por:
 
 **FuegoClaro** is an open-source platform created for the **NASA Space Apps Challenge 2026** under the *Harmonization of MODIS and VIIRS Hot Spots* challenge.
 
-It ingests over **116,000 satellite thermal detections across Ecuador (2022–2026)**, providing a rigorous scientific pipeline that performs territorial attribution across Ecuador's 24 provinces, statistical anomaly detection (z-score + Benjamini–Hochberg False Discovery Rate control), and a **machine learning wildfire risk model** (ST-DBSCAN clustering + Gradient Boosting) spanning forecasting horizons from 0 to 7 days.
+It ingests over **116,000 satellite thermal detections across Ecuador (2022–2026)**, providing a scientific pipeline that performs territorial attribution across Ecuador's 24 provinces and cantons, environmental alerts cross-referencing National Protected Areas (SNAP), statistical anomaly detection (z-score + Benjamini–Hochberg False Discovery Rate control), and a **machine learning wildfire susceptibility model** (ST-DBSCAN clustering + Gradient Boosting) spanning forecasting horizons from 0 to 7 days.
 
 ---
 
 ## 🚀 Key Features
 
-- 👥 **Adaptive Dual-Persona UX:**
-  - **Citizen Mode:** Plain Spanish language, intuitive hazard indicators, clean design, zero jargon, and immediate emergency contact guidelines (ECU 911).
-  - **Expert Mode:** Full orbital telemetry, MODIS vs VIIRS bimodal filtering, Fire Radiative Power (FRP in MW) distributions, NASA algorithmic confidence filtering, and canonical CSV exports.
+- 🗺️ **Hierarchical Provincial & Cantonal Territorial Filtering:**
+  - Deep-dive filtering across Country, 4 Natural Regions, 24 Provinces, and **Cantons** backed by official boundary GeoJSONs.
+- 🛡️ **Environmental Alerts & Protected Wilderness (SNAP):**
+  - Real-time cross-referencing between satellite hotspots, ecological reserves, national parks, and oil flares to prioritize vulnerable ecosystems.
+- 🔮 **Multi-Horizon Wildfire Susceptibility & Predictive ML (0–7 Days):**
+  - 0.1° daily grid risk predictions (spatial GeoJSON layers for horizons h0, h1, h3, h7) combining ST-DBSCAN spatial clustering with weather variables (Open-Meteo) and elevation (DEM).
+- 🛰️ **Orbital Telemetry & MODIS vs. VIIRS Harmonization:**
+  - Multi-sensor selection, NASA algorithmic confidence filtering (low, nominal, high), and Fire Radiative Power (FRP in MW) distribution analysis without arbitrary unified scores.
 - 🗺️ **Unwatermarked Multi-Basemap Interactive Cartography:**
-  - Powered by Esri: *Dark Canvas*, *High-Resolution Satellite Imagery*, and *Topographic Terrain*.
-  - Dynamic radiant heat marker clustering and province-level boundaries.
-- 📊 **Statistical Anomaly Engine:**
-  - Identifies genuine deviations against a 4-year historical baseline, computing two-sided p-values and applying FDR correction to prevent statistical false alarms.
-- 🤖 **Spatiotemporal Fire Risk Predictive Model (ML):**
-  - Daily 0.1° grid predictions leveraging historical thermal clustering, weather factors (Open-Meteo), and topographic elevation (DEM).
-- 📅 **Solar-Day Calendar & Sensor Intercomparison:**
-  - Monthly heat maps calibrated to Ecuadorian local time (UTC-5 continental, UTC-6 Galápagos).
+  - Clean Esri layers (*Dark Canvas*, *High-Resolution Satellite*, *Topographic Terrain*) with radiant heat marker clusters.
+- 📊 **Statistical Anomaly Radar & Verifiable Findings:**
+  - Baseline-calibrated deviation detection with z-score and Benjamini–Hochberg FDR control to filter out statistical noise.
+- 📅 **Solar-Day Calendar & Fire Event Clustering:**
+  - Monthly heat maps calibrated to Ecuadorian local time (UTC-5 continental, UTC-6 Galápagos) and spatiotemporal event aggregation (`/fire-events`).
 
 ---
 
@@ -215,7 +220,7 @@ docker compose up --build
 ## 📊 Data Sources & Attribution
 
 - **Thermal Anomalies:** [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/) (MODIS Collection 6.1 and VIIRS 375 m NOAA-20, SP & NRT).
-- **Administrative Boundaries:** [Natural Earth 1:10m](https://www.naturalearthdata.com/) (Ecuador Provincial GeoJSON).
+- **Administrative Boundaries:** [Natural Earth 1:10m](https://www.naturalearthdata.com/) & Ecuador Cantonal GeoJSON.
 - **Cartography:** [Esri Basemaps](https://www.esri.com/) & OpenStreetMap.
 - **Protected Ecosystems:** SNAP / Ministry of Environment, Water and Ecological Transition of Ecuador (MAATE).
 - **Weather & Topography:** Open-Meteo API & NASA SRTM DEM.
