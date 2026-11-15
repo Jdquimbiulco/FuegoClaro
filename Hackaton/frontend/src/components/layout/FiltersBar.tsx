@@ -36,9 +36,11 @@ const fieldClass =
 function QualitySelector({
   value,
   onChange,
+  onOpenChange,
 }: {
   value: string
   onChange: (value: string) => void
+  onOpenChange: (isOpen: boolean) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -47,10 +49,14 @@ function QualitySelector({
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
+        onOpenChange(false)
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsOpen(false)
+      if (event.key === 'Escape') {
+        setIsOpen(false)
+        onOpenChange(false)
+      }
     }
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside)
@@ -70,7 +76,8 @@ function QualitySelector({
   return (
     <div
       ref={containerRef}
-      className={`relative col-span-2 flex flex-col gap-1 lg:col-span-1 ${isOpen ? 'z-50' : 'z-20'}`}
+      data-open={isOpen}
+      className={`quality-selector relative col-span-2 flex flex-col gap-1 xl:col-span-1 ${isOpen ? 'z-[800]' : 'z-20'}`}
     >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slateish">
@@ -95,13 +102,16 @@ function QualitySelector({
 
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen((prev) => {
+          onOpenChange(!prev)
+          return !prev
+        })}
         className="focus-ring flex w-full items-center justify-between rounded-lg border border-ink-700 bg-ink-850 px-2.5 py-2 text-left text-xs text-slate-100 transition hover:border-ink-600 focus:border-ember-400"
         aria-expanded={isOpen}
       >
-        <span className="flex items-center gap-2 truncate">
+        <span className="flex min-w-0 items-center gap-2 truncate">
           <span className="truncate font-medium">{currentOption.label}</span>
-          <Badge tone={currentOption.badgeTone} className="text-[9px] py-0">
+          <Badge tone={currentOption.badgeTone} className="shrink-0 py-0 text-[9px]">
             {currentOption.shortLabel}
           </Badge>
         </span>
@@ -130,6 +140,7 @@ function QualitySelector({
                   onClick={() => {
                     onChange(option.value)
                     setIsOpen(false)
+                      onOpenChange(false)
                   }}
                   className={`group relative flex w-full flex-col rounded-lg p-2.5 text-left transition ${
                     isSelected
@@ -173,6 +184,7 @@ function QualitySelector({
 export function FiltersBar({ demonstration = false }: { demonstration?: boolean } = {}) {
   const { meta, filters, update, reset, activeFilterCount, viewMode, regionName } = useFilters()
   const [showCustomDates, setShowCustomDates] = useState(false)
+  const [qualityOpen, setQualityOpen] = useState(false)
 
   const isBasic = viewMode === 'basic'
   const maxDate = meta.date_range.end ?? undefined
@@ -203,8 +215,8 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
 
   return (
     <div
-      className={`panel relative mb-6 border border-ink-700/80 bg-ink-900/90 p-3.5 shadow-md backdrop-blur-md sm:p-4 ${
-        isBasic ? 'z-20' : 'z-40'
+      className={`filters-panel panel relative mb-6 border border-ink-700/80 bg-ink-900/90 p-3.5 shadow-md backdrop-blur-md sm:p-4 ${
+        qualityOpen ? 'z-[700]' : isBasic ? 'z-20' : 'z-40'
       }`}
     >
       {isBasic ? (
@@ -411,8 +423,8 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-[1.25fr_1.25fr_1fr_1fr_1.1fr_1fr]">
-            <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(150px,1.3fr)_minmax(175px,1.45fr)]">
+            <label className="col-span-2 flex flex-col gap-1 xl:col-span-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Región / Provincia</span>
               <select
                 className={fieldClass}
@@ -440,7 +452,7 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
               </select>
             </label>
 
-            <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+            <label className="col-span-2 flex flex-col gap-1 xl:col-span-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Cantón</span>
               <select
                 className={fieldClass}
@@ -485,7 +497,7 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
               </div>
             </label>
 
-            <div className="col-span-2 flex flex-col gap-1 lg:col-span-1">
+            <div className="col-span-2 flex flex-col gap-1 xl:col-span-1">
               <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Sensor orbital</span>
               <div className="grid grid-cols-3 gap-1 rounded-lg border border-ink-700 bg-ink-850 p-1">
                 {SENSOR_OPTIONS.map((option) => {
@@ -496,7 +508,7 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
                       type="button"
                       title={option.desc}
                       onClick={() => update({ sensor: option.value })}
-                      className={`focus-ring flex items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-[11px] font-semibold transition ${
+                      className={`focus-ring flex min-w-0 items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-center text-[11px] font-semibold leading-tight transition ${
                         active ? 'bg-ink-700 text-white shadow-sm' : 'text-slateish hover:text-slate-200'
                       }`}
                     >
@@ -513,6 +525,7 @@ export function FiltersBar({ demonstration = false }: { demonstration?: boolean 
             <QualitySelector
               value={filters.confidence}
               onChange={(confidence) => update({ confidence })}
+              onOpenChange={setQualityOpen}
             />
           </div>
 

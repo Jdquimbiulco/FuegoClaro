@@ -6,13 +6,14 @@ import type { FireDashboard } from '../types/fire'
 
 interface Result { key: string; data: FireDashboard | null; demo: boolean; error: string | null }
 
-export function useFireDashboard(filters: FilterState, meta: Meta, granularity: Granularity) {
+export function useFireDashboard(filters: FilterState, meta: Meta, granularity: Granularity, eventLimit = 500) {
   const [result, setResult] = useState<Result | null>(null)
   const [nonce, setNonce] = useState(0)
   const refetch = useCallback(() => setNonce((value) => value + 1), [])
   const path = withQuery('/fire-events', {
     start_date: filters.start, end_date: filters.end, region_id: filters.region,
-    sensor: filters.sensor, confidence: filters.confidence, province_ids: filters.provinces, granularity, format: 'dashboard',
+    canton_id: filters.canton, sensor: filters.sensor, confidence: filters.confidence,
+    province_ids: filters.provinces, granularity, format: 'dashboard', limit: eventLimit,
   })
   const key = `${path}:${meta.dataset_version}:${nonce}`
   useEffect(() => {

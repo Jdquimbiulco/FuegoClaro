@@ -212,7 +212,7 @@ function MapControls({
   return (
     <>
       {/* Selector de Capas / Basemap (Esquina Superior Derecha) */}
-      <div className="absolute right-3 top-3 z-[500] flex items-center gap-1 rounded-xl border border-ink-700/80 bg-ink-900/95 p-1 shadow-2xl backdrop-blur-md">
+      <div className="absolute right-3 top-3 z-[700] flex max-w-[calc(100%-1.5rem)] items-center gap-1 overflow-x-auto rounded-xl border border-ink-700/80 bg-ink-900/95 p-1 shadow-2xl backdrop-blur-md">
         {(Object.keys(BASEMAPS) as BasemapMode[]).map((key) => {
           const active = basemap === key
           const item = BASEMAPS[key]
@@ -323,8 +323,21 @@ export function FiresMap({
   onRiskHorizonChange?: (value: number) => void
   alertsLoading?: boolean
 }) {
-  const [basemap, setBasemap] = useState<BasemapMode>('dark')
+  const [basemap, setBasemap] = useState<BasemapMode>(() =>
+    document.documentElement.dataset.theme === 'light' ? 'topo' : 'dark',
+  )
   const [resetNonce, setResetNonce] = useState(0)
+
+  // El fondo cartográfico acompaña al tema general. Los controles mantienen
+  // contraste alto para no perder legibilidad sobre imágenes o relieve.
+  useEffect(() => {
+    const root = document.documentElement
+    const syncBasemapWithTheme = () => setBasemap(root.dataset.theme === 'light' ? 'topo' : 'dark')
+    syncBasemapWithTheme()
+    const observer = new MutationObserver(syncBasemapWithTheme)
+    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => observer.disconnect()
+  }, [])
 
   const modisCount = points.filter((point) => point.sensor === 'MODIS').length
   const viirsCount = points.filter((point) => point.sensor === 'VIIRS').length
@@ -336,7 +349,7 @@ export function FiresMap({
   const currentBasemap = BASEMAPS[basemap]
 
   return (
-    <div className="relative h-[66vh] min-h-[500px] overflow-hidden rounded-2xl border border-ink-700/80 shadow-2xl">
+    <div className="map-surface relative h-[66vh] min-h-[500px] w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-ink-700/80 shadow-2xl">
       <MapContainer
         center={[-1.6, -78.4]}
         zoom={6}

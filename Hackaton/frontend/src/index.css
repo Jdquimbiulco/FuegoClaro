@@ -41,10 +41,18 @@ html[data-theme='light'] body {
 html[data-theme='light'] .bg-ink-900,
 html[data-theme='light'] .bg-ink-900\/80,
 html[data-theme='light'] .bg-ink-900\/90,
+html[data-theme='light'] .bg-ink-900\/95,
+html[data-theme='light'] .bg-ink-900\/75,
 html[data-theme='light'] .bg-ink-850,
+html[data-theme='light'] .bg-ink-850\/45,
+html[data-theme='light'] .bg-ink-850\/50,
+html[data-theme='light'] .bg-ink-850\/70,
+html[data-theme='light'] .bg-ink-850\/75,
 html[data-theme='light'] .bg-ink-850\/80,
 html[data-theme='light'] .bg-ink-850\/85,
 html[data-theme='light'] .bg-ink-850\/90,
+html[data-theme='light'] .bg-ink-950,
+html[data-theme='light'] .bg-ink-950\/70,
 html[data-theme='light'] .bg-ink-800,
 html[data-theme='light'] .bg-ink-800\/40,
 html[data-theme='light'] .bg-ink-800\/50,
@@ -71,9 +79,132 @@ html[data-theme='light'] .text-slateish,
 html[data-theme='light'] .text-slate-400 {
   color: #5f6871 !important;
 }
+html[data-theme='light'] .text-sky-100,
+html[data-theme='light'] .text-sky-200,
+html[data-theme='light'] .text-sky-300 { color: #155d75 !important; }
+html[data-theme='light'] .text-amber-100,
+html[data-theme='light'] .text-amber-200,
+html[data-theme='light'] .text-amber-300 { color: #7a4300 !important; }
+html[data-theme='light'] .text-rose-100,
+html[data-theme='light'] .text-rose-200,
+html[data-theme='light'] .text-rose-300 { color: #9f1d2c !important; }
+html[data-theme='light'] .text-emerald-100,
+html[data-theme='light'] .text-emerald-200,
+html[data-theme='light'] .text-emerald-300 { color: #166534 !important; }
 html[data-theme='light'] select option { background: #fffdf6; color: #182431; }
 html[data-theme='light'] input[type='date']::-webkit-calendar-picker-indicator { filter: none; }
 html[data-theme='light'] .leaflet-container { background: #dfe8e5; }
+
+/* El mapa conserva una interfaz oscura independiente del tema de la página. */
+html[data-theme='light'] .map-surface .bg-ink-900,
+html[data-theme='light'] .map-surface .bg-ink-900\/95,
+html[data-theme='light'] .map-surface .bg-ink-800,
+html[data-theme='light'] .map-surface .bg-ink-800\/40 {
+  background-color: #0a111b !important;
+}
+html[data-theme='light'] .map-surface .border-ink-700,
+html[data-theme='light'] .map-surface .border-ink-700\/80,
+html[data-theme='light'] .map-surface .border-ink-800 {
+  border-color: #1b2a3f !important;
+}
+html[data-theme='light'] .map-surface .text-white,
+html[data-theme='light'] .map-surface .text-slate-100,
+html[data-theme='light'] .map-surface .text-slate-200,
+html[data-theme='light'] .map-surface .text-slate-300 {
+  color: #e8eff9 !important;
+}
+html[data-theme='light'] .map-surface .text-slateish,
+html[data-theme='light'] .map-surface .text-slate-400 {
+  color: #9bb0ca !important;
+}
+
+html[data-theme='light'] .panel {
+  box-shadow: 0 8px 22px rgba(102, 77, 35, 0.10);
+}
+html[data-theme='light'] .filters-panel {
+  background: #fffdf6 !important;
+  border-color: #d7c9a9 !important;
+  backdrop-filter: none;
+}
+html[data-theme='light'] .dashboard-science-banner {
+  background: linear-gradient(105deg, #e7f6fb 0%, #fffdf6 58%, #f7efe0 100%) !important;
+  border-color: #9bcddd !important;
+}
+html[data-theme='light'] .events-feed {
+  background: #fffaf0 !important;
+  border-color: #d7c9a9 !important;
+}
+html[data-theme='light'] .events-feed__card {
+  background: #fffdf6 !important;
+  border-color: #d7c9a9 !important;
+}
+html[data-theme='light'] .notice-warning {
+  background: #fff6de !important;
+  border-color: #eccf83 !important;
+  color: #6c4300 !important;
+}
+html[data-theme='light'] .notice-critical {
+  background: #fff0ee !important;
+  border-color: #f2b9b1 !important;
+  color: #8f1d1d !important;
+}
+html[data-theme='light'] .notice-info {
+  background: #eaf7fb !important;
+  border-color: #a7d9e8 !important;
+  color: #155d75 !important;
+}
+html[data-theme='light'] .notice-neutral {
+  background: #fffdf6 !important;
+  border-color: #d7c9a9 !important;
+  color: #35404a !important;
+}
+html[data-theme='light'] .shadow-md,
+html[data-theme='light'] .shadow-lg,
+html[data-theme='light'] .shadow-xl,
+html[data-theme='light'] .shadow-2xl,
+html[data-theme='light'] .shadow-panel,
+html[data-theme='light'] .shadow-ember {
+  box-shadow: 0 6px 18px rgba(102, 77, 35, 0.10) !important;
+}
+html[data-theme='light'] .text-ember-100,
+html[data-theme='light'] .text-ember-200,
+html[data-theme='light'] .text-ember-300 {
+  color: #a00d0c !important;
+}
+html[data-theme='light'] .bg-ink-700.text-white {
+  color: #fffdf6 !important;
+}
+html[data-theme='light'] .calendar-cell {
+  background: #fffaf0;
+  border-color: #e6d37f;
+}
+html[data-theme='light'] .calendar-cell.int-1 { background: #fff0df; border-color: #f5bf91; }
+html[data-theme='light'] .calendar-cell.int-2 { background: #ffe0c8; border-color: #f7a66f; }
+html[data-theme='light'] .calendar-cell.int-3 { background: #ffc79f; border-color: #f58a4a; }
+html[data-theme='light'] .calendar-cell.int-4 { background: linear-gradient(135deg, #f5640a, #a00d0c); border-color: #a00d0c; }
+html[data-theme='light'] .calendar-cell.int-4 .text-white,
+html[data-theme='light'] .calendar-cell.int-4 .text-slate-100,
+html[data-theme='light'] .calendar-cell.int-4 .text-slateish { color: #fffdf6 !important; }
+
+.events-feed__scroller {
+  scrollbar-color: #f5640a #f3ead4;
+  scrollbar-width: thin;
+  touch-action: pan-x;
+}
+.events-feed__scroller::-webkit-scrollbar { height: 9px; }
+.events-feed__scroller::-webkit-scrollbar-track { background: #f3ead4; border-radius: 999px; }
+.events-feed__scroller::-webkit-scrollbar-thumb { background: #f5640a; border-radius: 999px; }
+.events-feed__track { min-width: 0; border-top: 1px solid var(--border); padding-top: 0.75rem; }
+.events-feed__track-label { flex: 0 0 auto; font-size: 0.75rem; color: var(--muted); }
+.events-feed__range {
+  width: 100%;
+  min-width: 0;
+  accent-color: #f5640a;
+  cursor: grab;
+}
+.events-feed__range:active { cursor: grabbing; }
+.events-feed__range:disabled { cursor: not-allowed; opacity: 0.45; }
+.map-surface .leaflet-container { max-width: 100%; }
 
 * {
   box-sizing: border-box;
@@ -190,11 +321,16 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, #ff5c16) 22%, transparent), 0 0 12px color-mix(in srgb, var(--c, #ff5c16) 55%, transparent);
 }
 
-.marker-cluster {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+/* Leaflet posiciona el contenedor del clúster con transform: translate3d().
+   Escalar ese contenedor lo reemplazaba y desplazaba el marcador fuera del mapa. */
+.marker-cluster > div,
+.fire-marker {
+  transform-origin: center;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.marker-cluster:hover {
-  transform: scale(1.12) !important;
+.marker-cluster:hover > div,
+.fire-marker:hover {
+  transform: scale(1.12);
 }
 .marker-cluster-small,
 .marker-cluster-medium,

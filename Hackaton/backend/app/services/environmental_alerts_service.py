@@ -52,14 +52,22 @@ def _observed_cache_key(spec: FilterSpec) -> tuple:
 
 
 def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
-    events, _ = fire_events_service.list_events(spec, severity="alerta_roja", limit=5000)
+    # Comparte el agrupamiento ligero del feed; para el cruce SNAP no se
+    # necesita construir hulls ni enriquecer miles de eventos.
+    events = fire_events_service._select_raw_events(
+        spec,
+        severity="alerta_roja",
+        province_ids=None,
+        geometry_mode="bbox",
+    )
     evidence = apply_filters(get_store().evidence_df, spec)
     if evidence.empty:
         return []
     points = evidence.set_index(evidence["id"].astype(str), drop=False)
     alerts: list[dict[str, Any]] = []
+    emitted: set[str] = set()
     for event in events:
-        for point_id in event.puntos_ids:
+        for point_id in event["puntos_ids"]:
             if point_id not in points.index:
                 continue
             point = points.loc[point_id]
@@ -67,9 +75,10 @@ def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
             geometry = {"type": "Point", "coordinates": [float(point["longitude"]), float(point["latitude"])]}
             for area in protected_areas_service.intersecting_areas(geometry):
                 area_props = area["properties"]
-                identifier = _alert_id("observed", event.id_evento, str(area_props["area_id"]))
-                if any(item["id"] == identifier for item in alerts):
+                identifier = _alert_id("observed", event["id_evento"], str(area_props["area_id"]))
+                if identifier in emitted:
                     continue
+                emitted.add(identifier)
                 alerts.append(
                     {
                         "id": identifier,
@@ -77,7 +86,7 @@ def _build_observed_alerts(spec: FilterSpec) -> list[dict[str, Any]]:
                         "priority": "critical",
                         "title": "Evento térmico crítico en área protegida",
                         "coordinates": [float(point["latitude"]), float(point["longitude"])],
-                        "event": {"id": event.id_evento, "level": event.nivel_alerta, "start": event.inicio, "end": event.fin, "frp_total": event.frp_total},
+                        "event": {"id": event["id_evento"], "level": event["nivel_alerta"], "start": event["inicio"], "end": event["fin"], "frp_total": event["frp_total"]},
                         "protected_area": {"id": area_props["area_id"], "name": area_props["name"], "category": area_props["category"], "subsystem": area_props["subsystem"]},
                         "disclaimer": "Una detección térmica dentro de SNAP requiere verificación en campo; no confirma incendio ni superficie afectada.",
                     }

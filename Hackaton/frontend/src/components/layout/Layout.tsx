@@ -66,11 +66,11 @@ export function Layout() {
   const { meta } = useFilters()
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-clip">
       <Sidebar />
       <div className="lg:pl-64">
         <MobileNav />
-        <main className="mx-auto max-w-[1600px] px-3 py-4 sm:px-5 lg:px-7">
+        <main className="mx-auto min-w-0 max-w-[1600px] px-3 py-4 sm:px-5 lg:px-7">
           <Topbar meta={meta} />
           <DataModeBanner />
           <Outlet />
