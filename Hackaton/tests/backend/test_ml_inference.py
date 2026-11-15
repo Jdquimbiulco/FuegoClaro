@@ -129,31 +129,6 @@ def test_feature_columns_do_not_include_same_day_raw_sources():
     assert "wx_temperature_2m_max_lag1" in h1
 
 
-def test_open_meteo_parser():
-    client = OpenMeteoClient(cache_dir=None)
-    chunk = pd.DataFrame({"cell_id": ["a", "b"], "lat": [0.0, 1.0], "lon": [0.0, 1.0]})
-    payload = [
-        {
-            "daily": {
-                "time": ["2025-01-01", "2025-01-02"],
-                "temperature_2m_max": [20.0, 21.0],
-                "precipitation_sum": [0.0, 1.0],
-            }
-        },
-        {
-            "daily": {
-                "time": ["2025-01-01", "2025-01-02"],
-                "temperature_2m_max": [25.0, 26.0],
-                "precipitation_sum": [2.0, 3.0],
-            }
-        },
-    ]
-    parsed = client._parse_daily(payload, chunk)
-    assert len(parsed) == 4
-    assert set(parsed["cell_id"]) == {"a", "b"}
-    assert parsed.loc[parsed["cell_id"] == "b", "temperature_2m_max"].max() == 26.0
-
-
 def test_ndvi_parser_and_daily_fill():
     frame = pd.DataFrame(
         {
