@@ -2,7 +2,7 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import { useEffect } from 'react'
 import type { FeatureCollection } from 'geojson'
-import { GeoJSON, MapContainer, ScaleControl, TileLayer, ZoomControl, useMap } from 'react-leaflet'
+import { CircleMarker, Popup, GeoJSON, MapContainer, ScaleControl, TileLayer, ZoomControl, useMap } from 'react-leaflet'
 import type { Detection } from '../../types/api'
 import { CONFIDENCE_LABELS, SENSOR_COLORS } from '../../lib/constants'
 import { escapeHtml, formatDecimal, formatNumber } from '../../lib/format'
@@ -83,6 +83,24 @@ function ClusterLayer({ points }: { points: Detection[] }) {
   return null
 }
 
+export interface EventFocus {
+  coordinates: [number, number]
+  name: string
+  demo: boolean
+}
+
+function FocusEvent({ focus }: { focus: EventFocus }) {
+  const map = useMap()
+  const [lat, lon] = focus.coordinates
+  useEffect(() => {
+    map.invalidateSize()
+    map.flyTo([lat, lon], 12, { duration: 0.8 })
+  }, [map, lat, lon])
+  return <CircleMarker center={focus.coordinates} radius={12} pathOptions={{ color: '#FFB020', weight: 3, fillOpacity: 0.25 }}>
+    <Popup><strong>{focus.name}</strong><p>{focus.demo ? 'Ubicación de demostración; no representa una alerta real.' : 'Centro del evento seleccionado en Incendios.'}</p></Popup>
+  </CircleMarker>
+}
+
 function FitBounds({ bbox }: { bbox: [number, number, number, number] | null }) {
   const map = useMap()
   useEffect(() => {
@@ -106,12 +124,14 @@ export function FiresMap({
   geojson,
   loading = false,
   total = 0,
+  focus = null,
 }: {
   points: Detection[]
   bbox: [number, number, number, number] | null
   geojson: FeatureCollection | null
   loading?: boolean
   total?: number
+  focus?: EventFocus | null
 }) {
   const modisCount = points.filter((point) => point.sensor === 'MODIS').length
   const viirsCount = points.filter((point) => point.sensor === 'VIIRS').length
@@ -148,7 +168,7 @@ export function FiresMap({
           />
         )}
         <ClusterLayer points={points} />
-        <FitBounds bbox={bbox} />
+        {focus ? <FocusEvent focus={focus} /> : <FitBounds bbox={bbox} />}
         <ZoomControl position="bottomright" />
         <ScaleControl position="bottomleft" imperial={false} />
       </MapContainer>

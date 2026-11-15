@@ -1,13 +1,17 @@
 import {
+  Activity,
   BookOpen,
   Braces,
   CheckCircle2,
+  ChevronDown,
   Database,
   FileJson,
   GitBranch,
   Globe2,
   Hash,
   Layers,
+  MapPin,
+  Satellite,
   ShieldCheck,
   Sigma,
   Terminal,
@@ -25,6 +29,70 @@ import { useFilters } from '../context/FiltersContext'
 import { useApi } from '../hooks/useApi'
 import { formatNumber } from '../lib/format'
 import type { ProvenanceResponse } from '../types/api'
+
+const SIMPLE_STEPS = [
+  {
+    title: 'Seleccionar el contexto de la consulta',
+    detail: 'El análisis comienza con los filtros de la página: periodo, territorio, sensor y calidad de las detecciones. Estos criterios delimitan los registros que consultan las vistas analíticas. El selector Público General muestra una lectura resumida; Modo Experto añade desgloses y métricas técnicas sobre esos datos.',
+    result: 'Antes de interpretar un indicador, revisa el periodo, la región y los filtros activos. El perfil cambia la presentación, no la fuente de los registros.',
+  },
+  {
+    title: 'Dashboard: conocer el panorama del periodo',
+    detail: 'El panel reúne el total de detecciones, su evolución mensual y su distribución territorial. Calculamos estos valores agrupando los registros por fecha local, provincia, región y sensor. En Modo Experto se añaden la distribución de confianza, las mediciones de FRP y las observaciones recientes. Seleccionar una provincia o región permite enfocar el análisis en ese territorio.',
+    result: 'Puedes reconocer cuándo se concentran las detecciones y qué territorios aportan más registros al periodo consultado.',
+  },
+  {
+    title: 'Mapa: localizar las observaciones',
+    detail: 'Situamos cada detección mediante sus coordenadas y mostramos las geometrías provinciales como referencia. La consulta aplica los filtros activos y carga hasta 20.000 registros, ordenados desde los más recientes. Los puntos permiten explorar la distribución espacial; el modo experto incorpora información técnica y la descarga de datos.',
+    result: 'Puedes ubicar las observaciones. Si la consulta supera el límite de carga, los puntos visibles no representan todos los registros del periodo.',
+  },
+  {
+    title: 'Calendario: revisar la actividad día por día',
+    detail: 'El calendario consulta el mes que seleccionas y agrupa las detecciones por día local. El color de cada celda representa su cantidad relativa dentro del mes. Al seleccionar una fecha aparece el detalle del día; en Modo Experto también se distingue el aporte de MODIS y VIIRS. El promedio mensual divide el total entre todos los días del mes.',
+    result: 'Puedes encontrar los días con mayor conteo y examinarlos individualmente. Una celda sin registros no permite determinar por sí sola la causa de esa ausencia.',
+  },
+  {
+    title: 'Comparador: contrastar MODIS y VIIRS',
+    detail: 'Aplicamos el mismo periodo y territorio a ambos sensores y presentamos sus conteos, participación y días con detecciones. La serie permite comparar por día, semana o mes. El modo experto añade información de confianza, plataformas y distribución regional. Como cada sensor tiene distinta resolución y sensibilidad, interpretamos las diferencias como diferencias de detección.',
+    result: 'Puedes comprobar cuánto aporta cada sensor y cómo varía su comportamiento en el tiempo, sin convertir la proporción entre conteos en una proporción de superficie afectada.',
+  },
+  {
+    title: 'Hallazgos: explicar los resultados calculados',
+    detail: 'Esta sección combina el total de detecciones, el número de hallazgos, el periodo analizado y una gráfica mensual. Las tarjetas se redactan mediante plantillas que incorporan los cálculos del backend: volumen, diferencias entre sensores, picos temporales y otros patrones disponibles. La vista resumida facilita la lectura y la experta permite revisar más detalle y descargar evidencia.',
+    result: 'Puedes relacionar las explicaciones con las cifras del periodo seleccionado. Cuando los filtros no devuelven datos, la página muestra un estado sin hallazgos.',
+  },
+  {
+    title: 'Incendios: consultar el centro de mando',
+    detail: 'El centro de mando reúne indicadores, un feed ordenado por severidad, comparación MODIS–VIIRS, distribución provincial y un mapa de calor mensual. Los filtros permiten combinar fechas, varias provincias, sensor y confianza. Cada tarjeta incluye ubicación, FRP, cantidad de focos y un botón para enfocar el evento en el mapa.',
+    result: 'Si el servicio de eventos aún no está disponible, la pantalla identifica sus ejemplos como datos de demostración. Los indicadores de confirmación y riesgo cantonal quedan sin datos hasta recibir las fuentes correspondientes.',
+  },
+  {
+    title: 'Metodología: comprobar cómo se obtuvieron las cifras',
+    detail: 'En esta página reunimos las fuentes de NASA FIRMS, las diferencias entre sensores y los criterios usados para interpretar los resultados. El anexo técnico detalla la descarga, normalización, asignación geográfica, validación y análisis estadístico. También permite consultar la versión, el archivo y la huella del conjunto de datos cuando el manifiesto está disponible.',
+    result: 'Puedes pasar de lo que ves en una pantalla a la explicación del cálculo y a la procedencia de los datos utilizados.',
+  },
+]
+
+const READING_KEYS = [
+  {
+    title: 'Detección',
+    detail:
+      'Es una señal de calor vista por el satélite en un píxel. Puede ser fuego, pero también suelo caliente, actividad industrial o una falsa alarma.',
+    icon: Activity,
+  },
+  {
+    title: 'Conteo',
+    detail:
+      'Es cuántas detecciones hubo en un día, una región o un sensor. Sirve para comparar patrones; no mide hectáreas ni gravedad.',
+    icon: Layers,
+  },
+  {
+    title: 'Anomalía',
+    detail:
+      'Es un conteo que se aleja de lo normal para esa fecha y región. Dice “inusual”, no “peligroso” ni “causado por algo”.',
+    icon: Sigma,
+  },
+]
 
 const PIPELINE = [
   {
@@ -103,137 +171,306 @@ export default function MethodologyPage() {
   return (
     <div className="animate-fade-up">
       <PageHeader
-        eyebrow="Metodología y procedencia"
-        title="Cómo se construyen los datos y qué no se puede concluir"
-        description="FuegoClaro armoniza detecciones de focos de calor MODIS y VIIRS de NASA FIRMS. Esta página documenta fuentes, transformaciones, supuestos, límites y reproducibilidad. No es un producto oficial de NASA."
+        eyebrow="Metodología"
+        title="Cómo funciona FuegoClaro"
+        description="De dónde salen los datos, qué hacemos con ellos y cuáles son sus límites. En una frase: mostramos señales de calor detectadas por satélite, no incendios confirmados."
         icon={BookOpen}
       />
 
-      {provenanceState.error ? (
-        <ErrorState message={provenanceState.error} onRetry={provenanceState.refetch} />
-      ) : provenanceState.loading && !provenance ? (
-        <LoadingBlock label="Cargando procedencia del dataset…" />
-      ) : (
-        <>
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-            <Card>
-              <SectionHeading
-                eyebrow="Fuente"
-                title="NASA FIRMS · MODIS y VIIRS"
-                description="Fire Information for Resource Management System. Los productos estándar (SP) se priorizan; los de tiempo casi real (NRT) cubren el tramo reciente y se identifican por registro."
-              />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[#FFB020]" />
-                    <p className="text-xs font-semibold text-white">MODIS Collection 6.1</p>
-                  </div>
-                  <p className="mt-1 text-[10px] leading-relaxed text-slateish">
-                    Terra/Aqua · píxel ~1 km · confianza numérica 0–100 · pasadas diarias con horarios variables.
-                  </p>
-                </div>
-                <div className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[#FF4D5E]" />
-                    <p className="text-xs font-semibold text-white">VIIRS 375 m</p>
-                  </div>
-                  <p className="mt-1 text-[10px] leading-relaxed text-slateish">
-                    NOAA-20 · píxel ~375 m · confianza categórica low/nominal/high · mayor detalle espacial.
-                  </p>
-                </div>
+      <Card className="mb-4 border-ember-400/20 bg-ember-500/[0.04]">
+        <SectionHeading
+          eyebrow="Nuestro método"
+          title="Qué hace FuegoClaro"
+          description="Tomamos datos públicos de satélite, los ordenamos y los convertimos en una lectura fácil de explorar. No creamos datos ni conclusiones que no estén en la fuente."
+        />
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[
+            {
+              icon: Satellite,
+              title: '1. Recibimos',
+              detail: 'NASA publica detecciones de calor de los sensores MODIS y VIIRS. FuegoClaro las descarga para Ecuador.',
+            },
+            {
+              icon: Layers,
+              title: '2. Ordenamos',
+              detail: 'Limpiamos, ubicamos cada detección en su provincia y la comparamos con el histórico.',
+            },
+            {
+              icon: MapPin,
+              title: '3. Mostramos',
+              detail: 'Convertimos esos datos en mapas, conteos, comparaciones, anomalías y hallazgos.',
+            },
+          ].map(({ icon: Icon, title, detail }) => (
+            <div key={title} className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg border border-ember-400/25 bg-ember-500/10 p-1.5 text-ember-300">
+                  <Icon size={14} />
+                </span>
+                <p className="text-xs font-semibold text-white">{title}</p>
               </div>
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full text-left text-[10px]">
-                  <thead>
-                    <tr className="border-b border-ink-700 text-[9px] uppercase tracking-wider text-slateish">
-                      <th className="py-1.5 pr-2 font-medium">Producto</th>
-                      <th className="py-1.5 pr-2 font-medium">Sensor</th>
-                      <th className="py-1.5 pr-2 font-medium">Cobertura solicitada</th>
-                      <th className="py-1.5 text-right font-medium">Registros</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sources.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="py-3 text-center text-slateish">
-                          El manifiesto no contiene desglose de productos.
-                        </td>
-                      </tr>
-                    ) : (
-                      sources.map((source) => (
-                        <tr key={source.source_product} className="border-b border-ink-700/50">
-                          <td className="py-1.5 pr-2 font-mono text-[9px] text-slate-200">{source.source_product}</td>
-                          <td className="py-1.5 pr-2 text-slate-200">{source.sensor}</td>
-                          <td className="num py-1.5 pr-2 text-slateish">
-                            {source.start} → {source.end}
-                          </td>
-                          <td className="num py-1.5 text-right text-slate-200">{formatNumber(source.records)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Badge tone="positive">{provenance?.data_mode === 'real' ? 'Dataset real' : 'Muestra'}</Badge>
-                <Badge tone="neutral">{meta.dataset_version ?? 'sin versión'}</Badge>
-                <Badge tone="ember">{meta.provinces.length} provincias</Badge>
-              </div>
-            </Card>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-slateish">{detail}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
 
-            <Card>
-              <SectionHeading eyebrow="Reproducibilidad" title="Archivo y manifiesto" />
-              <dl className="space-y-2 text-[11px]">
-                <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
-                  <dt className="flex items-center gap-1.5 text-slateish">
-                    <Database size={12} /> Archivo
-                  </dt>
-                  <dd className="break-all text-right font-mono text-[9px] text-slate-200">
-                    {manifest?.file?.path ?? provenance?.path ?? '—'}
-                  </dd>
-                </div>
-                <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
-                  <dt className="flex items-center gap-1.5 text-slateish">
-                    <Layers size={12} /> Registros publicados
-                  </dt>
-                  <dd className="num text-right text-slate-100">
-                    {formatNumber(Number(manifest?.records?.final ?? 0))}
-                  </dd>
-                </div>
-                <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
-                  <dt className="flex items-center gap-1.5 text-slateish">
-                    <Globe2 size={12} /> Cobertura
-                  </dt>
-                  <dd className="num text-right text-slate-100">
-                    {meta.date_range.start} → {meta.date_range.end}
-                  </dd>
-                </div>
-                <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
-                  <dt className="flex items-center gap-1.5 text-slateish">
-                    <FileJson size={12} /> Tamaño
-                  </dt>
-                  <dd className="num text-right text-slate-100">{bytes(manifest?.file?.bytes)}</dd>
-                </div>
-                <div className="flex items-start justify-between gap-2">
-                  <dt className="flex items-center gap-1.5 text-slateish">
-                    <Hash size={12} /> SHA-256
-                  </dt>
-                  <dd className="break-all text-right font-mono text-[9px] text-slate-200">
-                    {manifest?.file?.sha256 ?? '—'}
-                  </dd>
-                </div>
-              </dl>
-              <div className="mt-3">
-                <Notice tone="neutral" title="Trazabilidad">
-                  El manifiesto completo se publica en <code className="rounded bg-black/30 px-1">/api/v1/provenance</code>{' '}
-                  y en <code className="rounded bg-black/30 px-1">data/processed/manifest.json</code>. Incluye hashes,
-                  transformaciones y limitaciones.
-                </Notice>
+      <Card className="mb-4">
+        <SectionHeading
+          eyebrow="Proceso"
+          title="Cómo funciona cada sección de la página"
+          description="Sigue este recorrido para entender qué muestra cada sección, cómo se obtienen sus resultados y qué puedes hacer con ellos."
+        />
+        <ol className="space-y-3">
+          {SIMPLE_STEPS.map((step, index) => (
+            <li key={step.title} className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-4 sm:p-5">
+              <div className="flex items-center gap-3">
+                <span className="num flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-ember-400/30 bg-ember-500/10 text-xs font-semibold text-ember-200">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <h3 className="text-sm font-semibold text-white">{step.title}</h3>
               </div>
-            </Card>
+              <p className="mt-3 text-sm leading-relaxed text-slateish">{step.detail}</p>
+              <p className="mt-3 border-t border-ink-700/60 pt-3 text-sm leading-relaxed text-slate-200">
+                <span className="font-semibold text-ember-200">Resultado: </span>{step.result}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </Card>
+
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card>
+          <SectionHeading
+            eyebrow="Cómo leer el tablero"
+            title="Detección, conteo y anomalía no son lo mismo"
+            description="Tres ideas ayudan a explicar cualquier pantalla sin tecnicismos."
+          />
+          <div className="space-y-2">
+            {READING_KEYS.map(({ icon: Icon, title, detail }) => (
+              <div key={title} className="flex gap-2 rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
+                <span className="mt-0.5 rounded-lg border border-sky-400/25 bg-sky-400/10 p-1.5 text-sky-300">
+                  <Icon size={14} />
+                </span>
+                <div>
+                  <p className="text-xs font-semibold text-white">{title}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slateish">{detail}</p>
+                </div>
+              </div>
+            ))}
           </div>
+        </Card>
 
-          <Card className="mt-4">
+        <Card>
+          <SectionHeading
+            eyebrow="Los sensores"
+            title="MODIS y VIIRS ven diferente"
+            description="Los dos detectan calor, pero no con el mismo nivel de detalle. Por eso sus números no se leen como equivalentes."
+          />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#FFB020]" />
+                <p className="text-xs font-semibold text-white">MODIS · píxel ~1 km</p>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slateish">
+                Ve áreas más grandes y suele generar menos detecciones. Su confianza es un número de 0 a 100.
+              </p>
+            </div>
+            <div className="rounded-xl border border-ink-700/70 bg-ink-800/40 p-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#FF4D5E]" />
+                <p className="text-xs font-semibold text-white">VIIRS · píxel ~375 m</p>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slateish">
+                Ve detalles más finos y suele generar más detecciones. Su confianza es una categoría: baja, nominal o
+                alta.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <Notice tone="neutral" title="No se suman como si fueran lo mismo">
+              Una misma zona puede generar varios píxeles VIIRS y uno solo MODIS. Comparar sus conteos sirve para ver
+              diferencias de sensibilidad, no para estimar superficie quemada.
+            </Notice>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.15fr_1fr]">
+        <Card>
+          <SectionHeading
+            eyebrow="Fuente"
+            title="NASA FIRMS: datos públicos de satélite"
+            description="Fire Information for Resource Management System. Usamos MODIS Collection 6.1 y VIIRS 375 m para el territorio ecuatoriano."
+          />
+          {provenanceState.error ? (
+            <ErrorState message={provenanceState.error} onRetry={provenanceState.refetch} />
+          ) : provenanceState.loading && !provenance ? (
+            <LoadingBlock label="Cargando procedencia del dataset…" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[10px]">
+                <thead>
+                  <tr className="border-b border-ink-700 text-[9px] uppercase tracking-wider text-slateish">
+                    <th className="py-1.5 pr-2 font-medium">Producto</th>
+                    <th className="py-1.5 pr-2 font-medium">Sensor</th>
+                    <th className="py-1.5 pr-2 font-medium">Cobertura solicitada</th>
+                    <th className="py-1.5 text-right font-medium">Registros</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sources.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-3 text-center text-slateish">
+                        El manifiesto no contiene desglose de productos.
+                      </td>
+                    </tr>
+                  ) : (
+                    sources.map((source) => (
+                      <tr key={source.source_product} className="border-b border-ink-700/50">
+                        <td className="py-1.5 pr-2 font-mono text-[9px] text-slate-200">{source.source_product}</td>
+                        <td className="py-1.5 pr-2 text-slate-200">{source.sensor}</td>
+                        <td className="num py-1.5 pr-2 text-slateish">
+                          {source.start} → {source.end}
+                        </td>
+                        <td className="num py-1.5 text-right text-slate-200">{formatNumber(source.records)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Badge tone="positive">{provenance?.data_mode === 'real' ? 'Dataset real' : 'Muestra'}</Badge>
+            <Badge tone="neutral">{meta.dataset_version ?? 'sin versión'}</Badge>
+            <Badge tone="ember">{meta.provinces.length} provincias</Badge>
+          </div>
+          <p className="mt-3 text-[10px] leading-relaxed text-slateish">
+            FuegoClaro no es un producto oficial de NASA. Antes de tomar decisiones operativas, verifica siempre los
+            productos oficiales.
+          </p>
+        </Card>
+
+        <Card>
+          <SectionHeading
+            eyebrow="Qué significa una anomalía"
+            title="Inusual no es lo mismo que peligroso"
+            description="El radar de anomalías busca días fuera de lo habitual. No explica la causa ni confirma un incendio."
+          />
+          <div className="space-y-2 text-[11px] leading-relaxed text-slateish">
+            <p>
+              <span className="font-semibold text-slate-200">Qué comparamos:</span> el número de detecciones de un día
+              con la misma época de años anteriores.
+            </p>
+            <p>
+              <span className="font-semibold text-slate-200">Qué significa:</span> que el conteo fue más alto o más bajo
+              de lo esperado para esa fecha, región y sensor.
+            </p>
+            <p>
+              <span className="font-semibold text-slate-200">Qué no significa:</span> que haya más fuego. También puede
+              cambiar por nubosidad, cobertura del satélite o ajustes del algoritmo.
+            </p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <Badge tone="neutral">
+              <Sigma size={10} /> z-score
+            </Badge>
+            <Badge tone="neutral">control FDR</Badge>
+            <Badge tone="warning">No causal</Badge>
+          </div>
+        </Card>
+      </div>
+
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <Notice tone="critical" title="Lo que este tablero no dice" icon={ShieldCheck}>
+          <ul className="space-y-1">
+            <li>• Detección de foco de calor ≠ incendio confirmado ≠ superficie quemada.</li>
+            <li>• La ausencia de detección no implica ausencia de fuego (nubes, humo, geometría).</li>
+            <li>• Los conteos MODIS y VIIRS no son comparables como área ni gravedad.</li>
+            <li>• Una anomalía no explica la causa del cambio.</li>
+            <li>• Los datos dependen de la cobertura histórica y de la calidad de cada sensor.</li>
+          </ul>
+        </Notice>
+        <Notice tone="info" title="Atribución y uso" icon={CheckCircle2}>
+          Fuente: NASA FIRMS. MODIS Collection 6.1 y VIIRS 375 m. Límites administrativos: Natural Earth 1:10m. Fondo de
+          mapa: CARTO / OpenStreetMap. Este proyecto es una herramienta de exploración y no está avalado por NASA.
+        </Notice>
+      </div>
+
+      <details className="panel group mt-4 p-4 sm:p-5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <div>
+            <p className="eyebrow mb-1">Anexo técnico</p>
+            <h2 className="text-base font-semibold text-white sm:text-lg">
+              Fuentes, pipeline y reproducibilidad
+            </h2>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slateish">
+              Para analistas y desarrolladores: metodología completa, normalización de confianza, API y comandos de
+              ejecución.
+            </p>
+          </div>
+          <ChevronDown
+            size={18}
+            className="shrink-0 text-slateish transition-transform duration-200 group-open:rotate-180"
+          />
+        </summary>
+
+        <div className="mt-5 space-y-4">
+          <Card>
+            <SectionHeading eyebrow="Reproducibilidad" title="Archivo y manifiesto" />
+            <dl className="space-y-2 text-[11px]">
+              <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
+                <dt className="flex items-center gap-1.5 text-slateish">
+                  <Database size={12} /> Archivo
+                </dt>
+                <dd className="break-all text-right font-mono text-[9px] text-slate-200">
+                  {manifest?.file?.path ?? provenance?.path ?? '—'}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
+                <dt className="flex items-center gap-1.5 text-slateish">
+                  <Layers size={12} /> Registros publicados
+                </dt>
+                <dd className="num text-right text-slate-100">
+                  {formatNumber(Number(manifest?.records?.final ?? 0))}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
+                <dt className="flex items-center gap-1.5 text-slateish">
+                  <Globe2 size={12} /> Cobertura
+                </dt>
+                <dd className="num text-right text-slate-100">
+                  {meta.date_range.start} → {meta.date_range.end}
+                </dd>
+              </div>
+              <div className="flex items-start justify-between gap-2 border-b border-ink-700/60 pb-2">
+                <dt className="flex items-center gap-1.5 text-slateish">
+                  <FileJson size={12} /> Tamaño
+                </dt>
+                <dd className="num text-right text-slate-100">{bytes(manifest?.file?.bytes)}</dd>
+              </div>
+              <div className="flex items-start justify-between gap-2">
+                <dt className="flex items-center gap-1.5 text-slateish">
+                  <Hash size={12} /> SHA-256
+                </dt>
+                <dd className="break-all text-right font-mono text-[9px] text-slate-200">
+                  {manifest?.file?.sha256 ?? '—'}
+                </dd>
+              </div>
+            </dl>
+            <div className="mt-3">
+              <Notice tone="neutral" title="Trazabilidad">
+                El manifiesto completo se publica en <code className="rounded bg-black/30 px-1">/api/v1/provenance</code>{' '}
+                y en <code className="rounded bg-black/30 px-1">data/processed/manifest.json</code>. Incluye hashes,
+                transformaciones y limitaciones.
+              </Notice>
+            </div>
+          </Card>
+
+          <Card>
             <SectionHeading
               eyebrow="Pipeline"
               title="De la API de NASA FIRMS al tablero"
@@ -254,7 +491,7 @@ export default function MethodologyPage() {
             </div>
           </Card>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-2">
             <Card>
               <SectionHeading
                 eyebrow="Confianza"
@@ -309,7 +546,7 @@ export default function MethodologyPage() {
             </Card>
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_1fr]">
+          <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
             <Card>
               <SectionHeading
                 eyebrow="API"
@@ -386,25 +623,8 @@ export default function MethodologyPage() {
             </Card>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <Notice tone="critical" title="Limitaciones explícitas" icon={ShieldCheck}>
-              <ul className="space-y-1">
-                <li>• Detección de foco de calor ≠ incendio confirmado ≠ superficie quemada.</li>
-                <li>• La ausencia de detección no implica ausencia de fuego (nubes, humo, geometría).</li>
-                <li>• Los conteos MODIS y VIIRS no son directamente comparables como área ni gravedad.</li>
-                <li>• Los productos SP y NRT pueden diferir; el producto se documenta por registro.</li>
-                <li>• La línea base de anomalías depende de la cobertura histórica disponible.</li>
-              </ul>
-            </Notice>
-            <Notice tone="info" title="Atribución y uso" icon={CheckCircle2}>
-              Fuente: NASA FIRMS. MODIS Collection 6.1 y VIIRS 375 m. Límites administrativos: Natural Earth 1:10m.
-              Fondo de mapa: CARTO / OpenStreetMap. Este proyecto es una herramienta de exploración y no está avalado por
-              NASA. Verifica siempre los productos oficiales antes de tomar decisiones operativas.
-            </Notice>
-          </div>
-
           {manifest?.transformations && (
-            <Card className="mt-4">
+            <Card>
               <SectionHeading eyebrow="Manifiesto" title="Transformaciones registradas" />
               <ul className="grid gap-1.5 text-[10px] leading-relaxed text-slateish sm:grid-cols-2">
                 {manifest.transformations.map((item) => (
@@ -418,7 +638,7 @@ export default function MethodologyPage() {
           )}
 
           {meta.limitations.length > 0 && (
-            <Card className="mt-4">
+            <Card>
               <SectionHeading eyebrow="Dataset" title="Limitaciones declaradas por el manifiesto" />
               <ul className="space-y-1.5 text-[10px] leading-relaxed text-slateish">
                 {meta.limitations.map((item) => (
@@ -430,8 +650,8 @@ export default function MethodologyPage() {
               </ul>
             </Card>
           )}
-        </>
-      )}
+        </div>
+      </details>
     </div>
   )
 }

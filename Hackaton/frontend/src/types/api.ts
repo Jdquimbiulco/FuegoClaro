@@ -57,6 +57,7 @@ export interface FilterState {
   region: string
   sensor: 'all' | Sensor
   confidence: string
+  provinces?: string
 }
 
 export interface Detection {

@@ -1,15 +1,15 @@
 import { Flame, LoaderCircle } from 'lucide-react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { FiltersProvider } from './context/FiltersContext'
 import { useApi } from './hooks/useApi'
 import { Layout } from './components/layout/Layout'
 import { ErrorState } from './components/ui/Primitives'
 import type { Meta } from './types/api'
 import DashboardPage from './pages/DashboardPage'
+import FiresPage from './pages/FiresPage'
 import MapPage from './pages/MapPage'
 import CalendarPage from './pages/CalendarPage'
 import ComparePage from './pages/ComparePage'
-import AnomaliesPage from './pages/AnomaliesPage'
 import FindingsPage from './pages/FindingsPage'
 import MethodologyPage from './pages/MethodologyPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -29,6 +29,14 @@ function Splash() {
       </div>
     </div>
   )
+}
+
+function AnomaliesRedirect({ meta }: { meta: Meta }) {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  if (!params.get('start')) params.set('start', meta.default_window.start)
+  if (!params.get('end')) params.set('end', meta.default_window.end)
+  return <Navigate to={`/hallazgos?${params.toString()}#anomalias`} replace />
 }
 
 export default function App() {
@@ -52,19 +60,24 @@ export default function App() {
   }
 
   return (
-    <FiltersProvider meta={meta}>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="mapa" element={<MapPage />} />
-          <Route path="calendario" element={<CalendarPage />} />
-          <Route path="comparador" element={<ComparePage />} />
-          <Route path="anomalias" element={<AnomaliesPage />} />
-          <Route path="hallazgos" element={<FindingsPage />} />
-          <Route path="metodologia" element={<MethodologyPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </FiltersProvider>
+    <Routes>
+      <Route path="anomalias" element={<AnomaliesRedirect meta={meta} />} />
+      <Route
+        element={
+          <FiltersProvider meta={meta}>
+            <Layout />
+          </FiltersProvider>
+        }
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="incendios" element={<FiresPage />} />
+        <Route path="mapa" element={<MapPage />} />
+        <Route path="calendario" element={<CalendarPage />} />
+        <Route path="comparador" element={<ComparePage />} />
+        <Route path="hallazgos" element={<FindingsPage />} />
+        <Route path="metodologia" element={<MethodologyPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
   )
 }
