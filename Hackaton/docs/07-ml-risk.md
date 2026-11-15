@@ -40,9 +40,8 @@ esas filas se excluyen del entrenamiento/evaluación de ese horizonte.
 | Fuente | Uso | Credencial |
 | --- | --- | --- |
 | NASA FIRMS (`data/processed/detections.csv`) | Histórico de detecciones y eventos. | `FIRMS_MAP_KEY` solo para ingesta. |
-| Open-Meteo Archive (ERA5) | Clima diario histórico. | No requiere clave. |
-| Open-Meteo Forecast | Clima de los próximos 16 días para inferencia. | No requiere clave. |
-| Open-Meteo Elevation (Copernicus GLO-90) | Elevación, pendiente, aspecto y rugosidad. | No requiere clave. |
+| NASA POWER | Clima diario histórico. | No requiere clave. |
+| DEM local (Copernicus GLO-30) | Elevación, pendiente, aspecto y rugosidad. | No requiere clave. |
 | NASA AppEEARS MOD13Q1.061 | NDVI de 250 m cada 16 días. | `EARTHDATA_TOKEN` (o usuario/clave). |
 
 Las fuentes se consultan en el **centro de cada celda**. Todas las descargas se
