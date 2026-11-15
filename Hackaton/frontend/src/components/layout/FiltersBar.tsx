@@ -1,5 +1,15 @@
-import { CalendarRange, Filter, MapPin, RotateCcw, Search, SlidersHorizontal } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import {
+  CalendarRange,
+  Check,
+  ChevronDown,
+  Filter,
+  HelpCircle,
+  MapPin,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import { useFilters } from '../../context/FiltersContext'
 import { QUALITY_OPTIONS } from '../../lib/constants'
@@ -22,6 +32,140 @@ const PRESETS = [
 
 const fieldClass =
   'focus-ring w-full rounded-lg border border-ink-700 bg-ink-850 px-2.5 py-2 text-xs text-slate-100 outline-none transition hover:border-ink-600 focus:border-ember-400'
+
+function QualitySelector({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleKeyDown)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen])
+
+  const currentOption = useMemo(
+    () => QUALITY_OPTIONS.find((opt) => opt.value === value) ?? QUALITY_OPTIONS[0],
+    [value],
+  )
+
+  return (
+    <div ref={containerRef} className="relative col-span-2 flex flex-col gap-1 lg:col-span-1">
+      <div className="flex items-center justify-between">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slateish">
+          <span>Calidad algorítmica</span>
+          <div className="group/info relative inline-flex items-center">
+            <span
+              className="text-slate-400 hover:text-ember-300 transition cursor-help"
+              title="Información sobre calibración de calidad de NASA FIRMS"
+            >
+              <HelpCircle size={12} />
+            </span>
+            <div className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 hidden w-64 -translate-x-1/2 rounded-lg border border-ink-600 bg-ink-900 p-2.5 text-[11px] leading-relaxed text-slate-200 shadow-xl backdrop-blur-md group-hover/info:block">
+              <p className="font-semibold text-white">Calibración NASA FIRMS</p>
+              <p className="mt-1 text-slateish">
+                Calibra la probabilidad de que la anomalía térmica sea un fuego real y no reflejos o ruido del sensor.
+              </p>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-ink-600" />
+            </div>
+          </div>
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="focus-ring flex w-full items-center justify-between rounded-lg border border-ink-700 bg-ink-850 px-2.5 py-2 text-left text-xs text-slate-100 transition hover:border-ink-600 focus:border-ember-400"
+        aria-expanded={isOpen}
+      >
+        <span className="flex items-center gap-2 truncate">
+          <span className="truncate font-medium">{currentOption.label}</span>
+          <Badge tone={currentOption.badgeTone} className="text-[9px] py-0">
+            {currentOption.shortLabel}
+          </Badge>
+        </span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 text-slateish transition-transform duration-200 ${isOpen ? 'rotate-180 text-ember-300' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-full min-w-[320px] max-w-[380px] rounded-xl border border-ink-600 bg-ink-900/98 p-2 shadow-2xl backdrop-blur-xl animate-fade-in sm:w-[360px]">
+          <div className="border-b border-ink-800 px-2 pb-1.5">
+            <p className="text-[11px] font-bold text-white">Nivel de Confianza Algorítmica</p>
+            <p className="text-[10px] text-slateish">
+              Pasa el cursor sobre cada opción para conocer qué significa
+            </p>
+          </div>
+
+          <div className="mt-1.5 space-y-1">
+            {QUALITY_OPTIONS.map((option) => {
+              const isSelected = option.value === value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
+                  className={`group relative flex w-full flex-col rounded-lg p-2.5 text-left transition ${
+                    isSelected
+                      ? 'border border-ember-400/50 bg-ember-500/15'
+                      : 'border border-transparent hover:border-ink-700 hover:bg-ink-800/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${isSelected ? 'text-ember-300' : 'text-white group-hover:text-ember-200'}`}>
+                        {option.label}
+                      </span>
+                      <Badge tone={option.badgeTone} className="text-[9px] py-0">
+                        {option.badge}
+                      </Badge>
+                    </span>
+                    {isSelected && <Check size={14} className="text-ember-400 shrink-0" />}
+                  </div>
+
+                  <p className="mt-1 text-[11px] leading-snug text-slate-300">
+                    {option.description}
+                  </p>
+
+                  <p className="mt-1 text-[10px] leading-snug text-slate-400 border-t border-ink-800/60 pt-1">
+                    🔬 {option.technicalDetails}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <p className="text-[10px] text-slate-400 truncate" title={currentOption.description}>
+        💡 {currentOption.description}
+      </p>
+    </div>
+  )
+}
 
 export function FiltersBar() {
   const { meta, filters, update, reset, activeFilterCount, viewMode, regionName } = useFilters()
@@ -337,20 +481,10 @@ export function FiltersBar() {
               </div>
             </div>
 
-            <label className="col-span-2 flex flex-col gap-1 lg:col-span-1">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-slateish">Calidad algorítmica</span>
-              <select
-                className={fieldClass}
-                value={filters.confidence}
-                onChange={(event) => update({ confidence: event.target.value })}
-              >
-                {QUALITY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <QualitySelector
+              value={filters.confidence}
+              onChange={(confidence) => update({ confidence })}
+            />
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slateish">
