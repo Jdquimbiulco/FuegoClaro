@@ -16,6 +16,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { FiresMap } from '../components/map/FiresMap'
 import { PageHeader } from '../components/layout/Layout'
+import { FiltersBar } from '../components/layout/FiltersBar'
 import {
   Badge,
   Card,
@@ -125,11 +126,13 @@ export default function MapPage() {
         </Link>
       </div>
 
+      <FiltersBar />
+
       {detectionsState.error ? (
         <ErrorState message={detectionsState.error} onRetry={detectionsState.refetch} />
       ) : (
         <>
-          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="relative z-10 mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
               label="En el mapa"
               value={formatNumber(points.length)}
