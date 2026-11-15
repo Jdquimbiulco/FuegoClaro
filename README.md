@@ -19,3 +19,15 @@ El código fuente de la aplicación, backend, frontend y datasets se encuentra d
 - **Datos incluidos:** `Hackaton/data/processed/detections.csv`, GeoJSON provincial y muestras.
 - **Guía de Inicio:** [`Hackaton/GUIA_DE_INICIO.md`](Hackaton/GUIA_DE_INICIO.md).
 - **Documentación Técnica:** [`Hackaton/docs/`](Hackaton/docs/).
+
+---
+
+## 🌐 Despliegue en Producción
+- **Frontend:** [https://fuegoclaro-frontend.onrender.com](https://fuegoclaro-frontend.onrender.com)
+- **Backend API:** [https://fuegoclaro-backend.onrender.com](https://fuegoclaro-backend.onrender.com)
+
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
