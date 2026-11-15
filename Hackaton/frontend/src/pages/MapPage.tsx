@@ -34,7 +34,7 @@ import type { DetectionsResponse } from '../types/api'
 const MAP_LIMIT = 20000
 
 export default function MapPage() {
-  const { meta, filters, apiPath, regionName, viewMode, setViewMode } = useFilters()
+  const { meta, filters, update, apiPath, regionName, viewMode, setViewMode } = useFilters()
   const detectionsState = useApi<DetectionsResponse>(
     apiPath('/detections', { limit: MAP_LIMIT, order: 'desc' }),
   )
@@ -169,6 +169,41 @@ export default function MapPage() {
 
           <div className="grid gap-4 xl:grid-cols-[1fr_300px]">
             <div>
+              {/* Acceso Rápido a Regiones Naturales */}
+              <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-slate-300">
+                  <span className="font-semibold text-slate-400">Enfoque regional:</span>
+                  <span className="text-slate-100 font-bold">{regionName}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => update({ region: 'all' })}
+                    className={`focus-ring rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                      filters.region === 'all'
+                        ? 'border-ember-400/60 bg-ember-500/20 text-white font-bold'
+                        : 'border-ink-700 bg-ink-850/80 text-slate-300 hover:border-ink-600 hover:text-white'
+                    }`}
+                  >
+                    🇪🇨 Ecuador
+                  </button>
+                  {meta.regions.map((reg) => (
+                    <button
+                      key={reg.id}
+                      type="button"
+                      onClick={() => update({ region: reg.id })}
+                      className={`focus-ring rounded-lg border px-2 py-1 text-xs font-medium transition ${
+                        filters.region === reg.id
+                          ? 'border-ember-400/60 bg-ember-500/20 text-white font-bold'
+                          : 'border-ink-700 bg-ink-850/80 text-slate-300 hover:border-ink-600 hover:text-white'
+                      }`}
+                    >
+                      {reg.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <FiresMap
                 points={points}
                 bbox={bbox}
@@ -177,11 +212,11 @@ export default function MapPage() {
                 total={total}
               />
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slateish">
-                <span>Fondo: CARTO Dark Matter · OpenStreetMap</span>
+                <span>Fondo cartográfico: Esri World Canvas / Satellite / Topo (Sin marcas de agua)</span>
                 <span className="text-ink-500">·</span>
                 <span>{meta.attribution ?? 'Fuente: NASA FIRMS'}</span>
                 <span className="text-ink-500">·</span>
-                <span>Zoom máximo 17</span>
+                <span>Zoom con rueda o controles inferiores</span>
               </div>
             </div>
 
