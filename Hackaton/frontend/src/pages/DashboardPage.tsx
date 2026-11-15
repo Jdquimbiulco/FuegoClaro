@@ -262,7 +262,7 @@ export default function DashboardPage() {
           <FiltersBar />
 
           {/* 3. Tres Indicadores Vitales (Reducción de Carga Cognitiva) */}
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+          <div className="relative z-10 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
             <StatCard
               label="Focos térmicos observados"
               value={formatNumber(summary.total)}
@@ -432,7 +432,7 @@ export default function DashboardPage() {
           {/* Filtros de Telemetría Satelital */}
           <FiltersBar />
 
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="relative z-10 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatCard
               label="Detecciones de Píxel"
               value={formatNumber(summary.total)}

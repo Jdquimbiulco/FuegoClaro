@@ -125,7 +125,7 @@ export default function FiresPage() {
 
       <FiltersBar />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="relative z-10 mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Incendios agrupados"
           value={formatNumber(MOCK_CLUSTERS.length)}

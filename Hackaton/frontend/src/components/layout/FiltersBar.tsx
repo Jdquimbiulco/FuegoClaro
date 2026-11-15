@@ -68,7 +68,10 @@ function QualitySelector({
   )
 
   return (
-    <div ref={containerRef} className="relative col-span-2 flex flex-col gap-1 lg:col-span-1">
+    <div
+      ref={containerRef}
+      className={`relative col-span-2 flex flex-col gap-1 lg:col-span-1 ${isOpen ? 'z-50' : 'z-20'}`}
+    >
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-slateish">
           <span>Calidad algorítmica</span>
@@ -109,7 +112,7 @@ function QualitySelector({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 w-full min-w-[320px] max-w-[380px] rounded-xl border border-ink-600 bg-ink-900/98 p-2 shadow-2xl backdrop-blur-xl animate-fade-in sm:w-[360px]">
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-full min-w-[320px] max-w-[380px] rounded-xl border border-ink-600 bg-ink-900 p-2 shadow-2xl backdrop-blur-2xl animate-fade-in sm:w-[360px]">
           <div className="border-b border-ink-800 px-2 pb-1.5">
             <p className="text-[11px] font-bold text-white">Nivel de Confianza Algorítmica</p>
             <p className="text-[10px] text-slateish">
@@ -192,7 +195,11 @@ export function FiltersBar() {
   }, [filters.end, filters.start, maxDate, minDate])
 
   return (
-    <div className="panel mb-6 border border-ink-700/80 bg-ink-900/90 p-3.5 shadow-md backdrop-blur-md sm:p-4">
+    <div
+      className={`panel relative mb-6 border border-ink-700/80 bg-ink-900/90 p-3.5 shadow-md backdrop-blur-md sm:p-4 ${
+        isBasic ? 'z-20' : 'z-40'
+      }`}
+    >
       {isBasic ? (
         /* ================= VISTA PÚBLICO GENERAL / CIUDADANO ================= */
         <div className="space-y-3.5">
