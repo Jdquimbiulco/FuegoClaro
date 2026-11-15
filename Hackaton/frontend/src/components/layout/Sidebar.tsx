@@ -5,20 +5,21 @@ import {
   GitCompareArrows,
   LayoutDashboard,
   Map as MapIcon,
-  Radar,
+  ShieldAlert,
   Sparkles,
 } from 'lucide-react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useFilters } from '../../context/FiltersContext'
 import { formatDate } from '../../lib/format'
 import { Badge } from '../ui/Primitives'
+import { ViewModeToggle } from '../ui/ViewModeToggle'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/incendios', label: 'Incendios', icon: ShieldAlert },
   { to: '/mapa', label: 'Mapa', icon: MapIcon },
   { to: '/calendario', label: 'Calendario', icon: CalendarDays },
   { to: '/comparador', label: 'Comparador', icon: GitCompareArrows },
-  { to: '/anomalias', label: 'Anomalías', icon: Radar },
   { to: '/hallazgos', label: 'Hallazgos', icon: Sparkles },
   { to: '/metodologia', label: 'Metodología', icon: BookOpen },
 ]
@@ -83,16 +84,21 @@ export function Sidebar() {
 }
 
 export function MobileNav() {
+  const { pathname } = useLocation()
+  const showViewToggle = !pathname.startsWith('/metodologia')
   return (
     <div className="lg:hidden">
-      <div className="flex items-center gap-2 border-b border-ink-700/70 bg-ink-900/80 px-4 py-3 backdrop-blur-xl">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-ember-400/30 bg-ember-500/10 text-ember-300">
-          <Flame size={16} />
-        </span>
-        <div>
-          <p className="text-sm font-semibold text-white">FuegoClaro</p>
-          <p className="text-[9px] uppercase tracking-[0.14em] text-slateish">NASA Space Apps 2026</p>
+      <div className="flex items-center justify-between border-b border-ink-700/70 bg-ink-900/80 px-4 py-2.5 backdrop-blur-xl">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-ember-400/30 bg-ember-500/10 text-ember-300">
+            <Flame size={16} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-white">FuegoClaro</p>
+            <p className="text-[9px] uppercase tracking-[0.14em] text-slateish">NASA Space Apps 2026</p>
+          </div>
         </div>
+        {showViewToggle && <ViewModeToggle compact />}
       </div>
       <nav className="flex gap-1 overflow-x-auto border-b border-ink-700/60 bg-ink-900/60 px-2 py-1.5">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
@@ -116,24 +122,36 @@ export function MobileNav() {
 }
 
 export function Topbar({ meta }: { meta: ReturnType<typeof useFilters>['meta'] }) {
-  const { filters, regionName } = useFilters()
+  const { regionName } = useFilters()
+  const { pathname } = useLocation()
+  const showViewToggle = !pathname.startsWith('/metodologia')
   const live = meta.data_mode === 'real'
   return (
-    <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="eyebrow">Inteligencia geoespacial · Ecuador</p>
-        <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-          Focos de calor <span className="text-slateish">/</span> {regionName}
-        </h1>
-        <p className="mt-1 text-xs text-slateish">
-          {filters.start} → {filters.end} · MODIS y VIIRS armonizados
-        </p>
+    <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-ink-800/80 pb-3">
+      <div className="flex items-center gap-2.5 text-xs text-slateish">
+        <span className="font-semibold text-white">FuegoClaro</span>
+        <span className="text-ink-600">/</span>
+        <span className="text-slate-300 font-medium">Monitoreo Satelital Ecuador</span>
+        {regionName !== 'Ecuador' && (
+          <>
+            <span className="text-ink-600">/</span>
+            <span className="rounded-md border border-ember-400/30 bg-ember-500/15 px-2 py-0.5 text-[11px] font-bold text-ember-300">
+              {regionName}
+            </span>
+          </>
+        )}
       </div>
-      <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850/80 px-3 py-1.5 text-[11px] text-slateish">
-        <span className={`h-2 w-2 rounded-full ${live ? 'bg-mint' : 'bg-amber-400'}`} />
-        {live ? 'Datos reales NASA FIRMS' : 'Modo muestra / sin datos'}
-        <span className="text-ink-500">|</span>
-        <span className="num text-[10px]">{meta.dataset_version ?? '—'}</span>
+
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Selector de Modo con alta visibilidad */}
+        {showViewToggle && <ViewModeToggle />}
+
+        <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850/80 px-3 py-1 text-[11px] text-slateish">
+          <span className={`h-2 w-2 rounded-full ${live ? 'bg-mint' : 'bg-amber-400'}`} />
+          <span>{live ? 'NASA FIRMS' : 'Modo muestra'}</span>
+          <span className="text-ink-500">|</span>
+          <span className="num text-[10px] text-slate-300">{meta.dataset_version ?? '—'}</span>
+        </div>
       </div>
     </header>
   )

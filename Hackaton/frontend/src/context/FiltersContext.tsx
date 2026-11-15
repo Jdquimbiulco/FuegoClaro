@@ -1,12 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { FilterState, Meta } from '../types/api'
 import { withQuery } from '../services/api'
+
+export type ViewMode = 'basic' | 'expert'
 
 interface FiltersContextValue {
   meta: Meta
   filters: FilterState
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
+  toggleViewMode: () => void
   update: (patch: Partial<FilterState>) => void
   setDay: (day: string) => void
   reset: () => void
@@ -19,6 +24,30 @@ const FiltersContext = createContext<FiltersContextValue | null>(null)
 
 export function FiltersProvider({ meta, children }: { meta: Meta; children: ReactNode }) {
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('fuegoclaro_view_mode')
+      return saved === 'expert' ? 'expert' : 'basic'
+    } catch {
+      return 'basic'
+    }
+  })
+
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setViewModeState(mode)
+    try {
+      localStorage.setItem('fuegoclaro_view_mode', mode)
+    } catch {
+      // ignore storage errors
+    }
+  }, [])
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode(viewMode === 'basic' ? 'expert' : 'basic')
+  }, [viewMode, setViewMode])
 
   const filters: FilterState = useMemo(
     () => ({
@@ -27,6 +56,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       region: searchParams.get('region') || 'all',
       sensor: (searchParams.get('sensor') as FilterState['sensor']) || 'all',
       confidence: searchParams.get('confidence') || '',
+      provinces: searchParams.get('provinces') || '',
     }),
     [meta.default_window.end, meta.default_window.start, searchParams],
   )
@@ -42,8 +72,20 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       next.set('end', meta.default_window.end)
       changed = true
     }
-    if (changed) setSearchParams(next, { replace: true })
-  }, [meta.default_window.end, meta.default_window.start, searchParams, setSearchParams])
+    if (changed) {
+      navigate(
+        { pathname: location.pathname, search: next.toString(), hash: location.hash },
+        { replace: true },
+      )
+    }
+  }, [
+    location.hash,
+    location.pathname,
+    meta.default_window.end,
+    meta.default_window.start,
+    navigate,
+    searchParams,
+  ])
 
   const write = useCallback(
     (next: FilterState) => {
@@ -54,6 +96,8 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       params.set('sensor', next.sensor)
       if (next.confidence) params.set('confidence', next.confidence)
       else params.delete('confidence')
+      if (next.provinces) params.set('provinces', next.provinces)
+      else params.delete('provinces')
       setSearchParams(params, { replace: true })
     },
     [searchParams, setSearchParams],
@@ -85,6 +129,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
       region: 'all',
       sensor: 'all',
       confidence: '',
+      provinces: '',
     })
   }, [meta.default_window.end, meta.default_window.start, write])
 
@@ -102,6 +147,7 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
     if (filters.region !== 'all') count += 1
     if (filters.sensor !== 'all') count += 1
     if (filters.confidence) count += 1
+    if (filters.provinces) count += 1
     if (
       filters.start !== meta.default_window.start ||
       filters.end !== meta.default_window.end
@@ -125,8 +171,32 @@ export function FiltersProvider({ meta, children }: { meta: Meta; children: Reac
   )
 
   const value = useMemo(
-    () => ({ meta, filters, update, setDay, reset, apiPath, regionName, activeFilterCount }),
-    [meta, filters, update, setDay, reset, apiPath, regionName, activeFilterCount],
+    () => ({
+      meta,
+      filters,
+      viewMode,
+      setViewMode,
+      toggleViewMode,
+      update,
+      setDay,
+      reset,
+      apiPath,
+      regionName,
+      activeFilterCount,
+    }),
+    [
+      meta,
+      filters,
+      viewMode,
+      setViewMode,
+      toggleViewMode,
+      update,
+      setDay,
+      reset,
+      apiPath,
+      regionName,
+      activeFilterCount,
+    ],
   )
 
   return <FiltersContext.Provider value={value}>{children}</FiltersContext.Provider>
