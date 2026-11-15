@@ -29,7 +29,7 @@ import { useApi } from '../hooks/useApi'
 import { SENSOR_COLORS } from '../lib/constants'
 import { addMonths, formatDate, formatMonth, formatNumber, formatPercent } from '../lib/format'
 import { exportUrl } from '../services/api'
-import type { ApiEnvelope, CalendarData, CalendarDay } from '../types/api'
+import type { ApiEnvelope, CalendarData, CalendarDay, CalendarYearData } from '../types/api'
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
@@ -49,11 +49,15 @@ export default function CalendarPage() {
     (meta.date_range.end ?? filters.end ?? new Date().toISOString().slice(0, 10)).slice(0, 7),
   )
   const [selected, setSelected] = useState<CalendarDay | null>(null)
+  const [calendarMode, setCalendarMode] = useState<'days' | 'months'>('days')
 
   const calendarState = useApi<ApiEnvelope<CalendarData>>(
     apiPath('/calendar', { month }),
   )
   const calendar = calendarState.data?.data
+  const year = Number(month.slice(0, 4))
+  const calendarYearState = useApi<ApiEnvelope<CalendarYearData>>(apiPath('/calendar', { year }))
+  const calendarYear = calendarYearState.data?.data
 
   const minMonth = (meta.date_range.start ?? month).slice(0, 7)
   const maxMonth = (meta.date_range.end ?? month).slice(0, 7)
@@ -124,6 +128,23 @@ export default function CalendarPage() {
 
       <FiltersBar />
 
+      <div className="mb-4 flex items-center gap-2 rounded-xl border border-ink-700/70 bg-ink-850/70 p-1.5">
+        <button
+          type="button"
+          onClick={() => setCalendarMode('days')}
+          className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-semibold transition ${calendarMode === 'days' ? 'bg-ember-500/15 text-ember-200' : 'text-slateish hover:text-white'}`}
+        >
+          Vista diaria
+        </button>
+        <button
+          type="button"
+          onClick={() => setCalendarMode('months')}
+          className={`focus-ring rounded-lg px-3 py-1.5 text-xs font-semibold transition ${calendarMode === 'months' ? 'bg-ember-500/15 text-ember-200' : 'text-slateish hover:text-white'}`}
+        >
+          Estacionalidad por mes
+        </button>
+      </div>
+
       {calendarState.error ? (
         <ErrorState message={calendarState.error} onRetry={calendarState.refetch} />
       ) : (
@@ -158,6 +179,32 @@ export default function CalendarPage() {
               accent="#FF4D5E"
             />
           </div>
+
+          {calendarMode === 'months' && (
+            <Card className="mb-4">
+              <SectionHeading
+                eyebrow="Estacionalidad"
+                title={`Actividad mensual · ${year}`}
+                description="Selecciona un mes para abrir su detalle diario. La intensidad es relativa al mes más activo del año filtrado."
+              />
+              {calendarYearState.loading && !calendarYear ? <LoadingBlock compact /> : (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                  {calendarYear?.months.map((item) => (
+                    <button
+                      key={item.month}
+                      type="button"
+                      onClick={() => { setMonth(item.month); setSelected(null); setCalendarMode('days') }}
+                      className={`calendar-cell int-${item.intensity} focus-ring min-h-[92px]`}
+                    >
+                      <span className="text-xs font-semibold capitalize text-slate-100">{formatMonth(item.month).replace(` de ${year}`, '')}</span>
+                      <span className="num text-lg font-bold text-white">{formatNumber(item.total)}</span>
+                      <span className="text-[10px] text-slateish">detecciones</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
 
           <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
             <Card>
@@ -356,8 +403,7 @@ export default function CalendarPage() {
                       <Filter size={13} /> Filtrar este día en toda la app
                     </button>
                     <Link
-                      to="/mapa"
-                      onClick={() => setDay(selected.date)}
+                      to={`/mapa?start=${selected.date}&end=${selected.date}&region=${filters.region}&sensor=${filters.sensor}${filters.confidence ? `&confidence=${filters.confidence}` : ''}${filters.canton ? `&canton=${filters.canton}` : ''}`}
                       className="focus-ring inline-flex w-full items-center justify-center gap-2 rounded-lg border border-ink-700 bg-ink-800/70 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:border-ink-600 hover:text-white"
                     >
                       <Compass size={13} /> Ver este día en el mapa

@@ -20,6 +20,7 @@ Flujo:
 from __future__ import annotations
 
 import json
+from hashlib import sha1
 from collections import deque
 from pathlib import Path
 
@@ -339,8 +340,17 @@ def detect_fire_events(
         start = str(m_dates.min().date()) if not m_dates.empty else None
         end = str(m_dates.max().date()) if not m_dates.empty else None
         days = sorted(set(m_dates.dt.strftime("%Y-%m-%d")))
+        point_ids = (
+            df["id"].astype(str).iloc[members].tolist()
+            if "id" in df
+            else [str(value) for value in members.tolist()]
+        )
+        # El ID no puede depender del orden del DataFrame ni de la paginación:
+        # un mismo conjunto de detecciones debe poder consultarse por detalle
+        # después de haber sido listado con filtros.
+        event_id = sha1("|".join(sorted(point_ids)).encode("utf-8")).hexdigest()[:12]
         event = {
-            "id_evento": f"EVT-{cluster_id + 1:04d}",
+            "id_evento": f"EVT-{event_id}",
             "frp_total": float(np.sum(m_frp)),
             "frp_max": float(np.max(m_frp)),
             "puntos_count": int(members.size),
@@ -353,7 +363,7 @@ def detect_fire_events(
             "nocturnas": int(np.sum(daynight[members] == "N")),
             "sensores": sorted(set(df["sensor"].astype(str).iloc[members])) if "sensor" in df else [],
             "provincias": sorted(set(df["province_id"].astype(str).iloc[members])) if "province_id" in df else [],
-            "puntos_ids": df["id"].astype(str).iloc[members].tolist() if "id" in df else members.tolist(),
+            "puntos_ids": point_ids,
             "frp_medio": float(np.mean(m_frp)),
             "contraste_medio_k": float(np.mean(thermal[members])),
         }

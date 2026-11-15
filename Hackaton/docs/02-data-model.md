@@ -24,6 +24,7 @@ El dataset publicado es `data/processed/detections.csv`, acompañado de `data/pr
 | `scan` / `track` | Tamaño del píxel (km) cuando existe. |
 | `version` / `type` | Versión del producto y tipo de detección originales. |
 | `province` / `province_id` | Provincia asignada por contención geométrica. |
+| `canton` / `canton_id` | Cantón y código DPA asignados por contención con la capa oficial. |
 | `region` / `region_id` | Región natural: Costa, Sierra, Amazonía o Galápagos. |
 | `provenance_id` | Identificador de la ejecución de ingesta. |
 
@@ -31,6 +32,16 @@ El dataset publicado es `data/processed/detections.csv`, acompañado de `data/pr
 
 - **MODIS**: `confidence_score` 0–100; `low` <30, `nominal` 30–79, `high` ≥80.
 - **VIIRS**: `l/n/h` → `low/nominal/high`; no se crea un score numérico.
+
+## División cantonal
+
+`data/regions/ecuador_cantons.geojson` es el único artefacto territorial
+cantonal que se versiona. Contiene 224 polígonos en WGS84, derivados del ZIP
+oficial de **Organización Territorial Cantonal** del Ministerio de Gobierno / CONALI.
+El shapefile descargado y sus archivos auxiliares (`.shp`, `.dbf`, `.shx`,
+`.prj`, etc.) no se copian al repositorio porque la aplicación no los consume.
+La capa se simplificó a una tolerancia aproximada de 10 m para reducir su
+tamaño; se usa para filtro y presentación, no para deslinde legal.
 
 ## Manifiesto
 

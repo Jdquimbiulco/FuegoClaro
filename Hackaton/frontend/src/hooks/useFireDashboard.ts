@@ -12,7 +12,7 @@ export function useFireDashboard(filters: FilterState, meta: Meta, granularity: 
   const refetch = useCallback(() => setNonce((value) => value + 1), [])
   const path = withQuery('/fire-events', {
     start_date: filters.start, end_date: filters.end, region_id: filters.region,
-    sensor: filters.sensor, confidence: filters.confidence, province_ids: filters.provinces, granularity,
+    sensor: filters.sensor, confidence: filters.confidence, province_ids: filters.provinces, granularity, format: 'dashboard',
   })
   const key = `${path}:${meta.dataset_version}:${nonce}`
   useEffect(() => {

@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     earthdata_user: str = ""
     earthdata_password: str = ""
 
+    # Artefactos de riesgo predictivo. El programador se ejecuta en un
+    # contenedor separado; este intervalo permite ajustarlo sin tocar código.
+    susceptibility_refresh_seconds: int = 86400
+    susceptibility_horizons: str = "0,1,3,7"
+
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",
         env_file_encoding="utf-8",
@@ -68,6 +73,10 @@ class Settings(BaseSettings):
     @property
     def cache_dir(self) -> Path:
         return self.data_dir / "cache"
+
+    @property
+    def susceptibility_dir(self) -> Path:
+        return self.processed_dir / "susceptibility"
 
 
 @lru_cache

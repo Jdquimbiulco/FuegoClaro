@@ -460,6 +460,11 @@ Base URL: `http://localhost:8000/api/v1`
 | GET | `/anomalies` | Anomalías con z-score y FDR. |
 | GET | `/insights` | Hallazgos deterministas. |
 | GET | `/export/detections.csv` | Exportación CSV con los filtros activos. |
+| GET | `/fire-events` | Eventos agrupados; `format=geojson` (default), `dashboard` o `json`. |
+| GET | `/fire-events/{event_id}` | Detalle de un evento agrupado. |
+| GET | `/susceptibility` | Mapa agregado; queda `pending` hasta publicar el artefacto. |
+| GET | `/susceptibility/point` | Predicción puntual de riesgo con `lat`, `lon` y `date`. |
+| GET | `/analytics/summary` | Indicadores compuestos de detecciones, eventos y riesgo. |
 
 Filtros comunes:
 

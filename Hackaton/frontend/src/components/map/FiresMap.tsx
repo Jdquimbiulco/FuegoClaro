@@ -2,13 +2,14 @@ import L from 'leaflet'
 import 'leaflet.markercluster'
 import { Flame, Maximize2, Moon, Mountain, Satellite } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import type { FeatureCollection } from 'geojson'
+import type { Feature, FeatureCollection } from 'geojson'
 import { CircleMarker, Popup, GeoJSON, MapContainer, ScaleControl, TileLayer, ZoomControl, useMap } from 'react-leaflet'
-import type { Detection } from '../../types/api'
+import type { Detection, EnvironmentalAlert } from '../../types/api'
 import { CONFIDENCE_LABELS, SENSOR_COLORS } from '../../lib/constants'
 import { escapeHtml, formatDecimal, formatNumber } from '../../lib/format'
 
 type BasemapMode = 'dark' | 'satellite' | 'topo'
+export type MapLayers = { detections: boolean; risk: boolean; protectedAreas: boolean; alerts: boolean }
 
 const BASEMAPS: Record<
   BasemapMode,
@@ -250,6 +251,47 @@ function MapControls({
   )
 }
 
+const RISK_COLORS: Record<string, string> = { Bajo: '#3DDC97', Medio: '#FACC15', Alto: '#FF8A34', Extremo: '#FF4D5E' }
+
+function layerPopup(feature: Feature, layer: L.Layer) {
+  const props = feature.properties ?? {}
+  if (props.risk_level) {
+    const probability = typeof props.probability === 'number' ? `${(props.probability * 100).toFixed(2)}%` : '—'
+    layer.bindPopup(`<div><strong>Riesgo ${escapeHtml(String(props.risk_level))}</strong><br/>Probabilidad: ${probability}<br/>Horizonte: ${escapeHtml(String(props.window_days))} días<br/><small>Celda ~11 km; no confirma un incendio.</small></div>`)
+  } else if (props.name) {
+    layer.bindPopup(`<div><strong>${escapeHtml(String(props.name))}</strong><br/>${escapeHtml(String(props.category ?? 'Área protegida SNAP'))}<br/><small>Capa ambiental de referencia.</small></div>`)
+  }
+}
+
+function LayerControls({ layers, onChange, horizon, onHorizonChange, alerts, alertsLoading }: {
+  layers: MapLayers
+  onChange: (key: keyof MapLayers, value: boolean) => void
+  horizon: number
+  onHorizonChange: (value: number) => void
+  alerts: number
+  alertsLoading: boolean
+}) {
+  const rows: Array<[keyof MapLayers, string, string]> = [
+    ['detections', 'Focos de calor', '#FF7A2F'],
+    ['risk', 'Riesgo predictivo', '#FF4D5E'],
+    ['protectedAreas', 'Zonas protegidas SNAP', '#3DDC97'],
+    ['alerts', `Alertas ambientales (${alertsLoading ? 'cargando…' : alerts})`, '#FF4D5E'],
+  ]
+  return <div className="absolute bottom-3 left-3 z-[500] w-56 rounded-xl border border-ink-700/80 bg-ink-900/95 p-3 text-xs shadow-xl backdrop-blur-md">
+    <p className="mb-2 font-bold uppercase tracking-[0.12em] text-slate-300">Capas y alertas</p>
+    <div className="space-y-2">{rows.map(([key, label, color]) => <label key={key} className="flex cursor-pointer items-center gap-2 text-slate-200">
+      <input type="checkbox" className="accent-ember-500" checked={layers[key]} onChange={(event) => onChange(key, event.target.checked)} />
+      <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: color }} />{label}
+    </label>)}</div>
+    <label className="mt-3 block border-t border-ink-700 pt-2 text-slateish">Horizonte
+      <select aria-label="Horizonte de riesgo" value={horizon} onChange={(event) => onHorizonChange(Number(event.target.value))} className="mt-1 w-full rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-xs text-white">
+        <option value={0}>Hoy</option><option value={1}>1 día</option><option value={3}>3 días</option><option value={7}>7 días</option>
+      </select>
+    </label>
+    <p className="mt-2 text-[10px] leading-snug text-slateish">Las alertas son efímeras y se recalculan con la capa publicada.</p>
+  </div>
+}
+
 export function FiresMap({
   points,
   bbox,
@@ -257,6 +299,14 @@ export function FiresMap({
   loading = false,
   total = 0,
   focus = null,
+  riskGeojson = null,
+  protectedAreasGeojson = null,
+  alerts = [],
+  layers = { detections: true, risk: true, protectedAreas: true, alerts: true },
+  onLayerChange,
+  riskHorizon = 7,
+  onRiskHorizonChange,
+  alertsLoading = false,
 }: {
   points: Detection[]
   bbox: [number, number, number, number] | null
@@ -264,6 +314,14 @@ export function FiresMap({
   loading?: boolean
   total?: number
   focus?: EventFocus | null
+  riskGeojson?: FeatureCollection | null
+  protectedAreasGeojson?: FeatureCollection | null
+  alerts?: EnvironmentalAlert[]
+  layers?: MapLayers
+  onLayerChange?: (key: keyof MapLayers, value: boolean) => void
+  riskHorizon?: number
+  onRiskHorizonChange?: (value: number) => void
+  alertsLoading?: boolean
 }) {
   const [basemap, setBasemap] = useState<BasemapMode>('dark')
   const [resetNonce, setResetNonce] = useState(0)
@@ -322,7 +380,15 @@ export function FiresMap({
           />
         )}
 
-        <ClusterLayer points={points} />
+        {layers.risk && riskGeojson && <GeoJSON data={riskGeojson} onEachFeature={layerPopup} style={(feature) => {
+          const color = RISK_COLORS[String(feature?.properties?.risk_level)] ?? '#8EA3BE'
+          return { color, weight: 0.4, opacity: 0.65, fillColor: color, fillOpacity: 0.30 }
+        }} />}
+        {layers.protectedAreas && protectedAreasGeojson && <GeoJSON data={protectedAreasGeojson} onEachFeature={layerPopup} style={{ color: '#3DDC97', weight: 1.6, opacity: 0.9, fillColor: '#3DDC97', fillOpacity: 0.10 }} />}
+        {layers.detections && <ClusterLayer points={points} />}
+        {layers.alerts && alerts.map((alert) => <CircleMarker key={alert.id} center={alert.coordinates} radius={alert.priority === 'critical' ? 10 : 8} pathOptions={{ color: '#fff', weight: 2, fillColor: '#FF4D5E', fillOpacity: 0.95 }}>
+          <Popup><strong>{alert.title}</strong><p>{alert.protected_area.name} · {alert.protected_area.category}</p>{alert.risk && <p>Riesgo {alert.risk.level}: {(alert.risk.probability * 100).toFixed(2)}% · {alert.risk.window_days} días</p>}<small>{alert.disclaimer}</small></Popup>
+        </CircleMarker>)}
         {focus ? (
           <FocusEvent key={`focus-${resetNonce}`} focus={focus} />
         ) : (
@@ -338,6 +404,7 @@ export function FiresMap({
         onBasemapChange={setBasemap}
         onResetZoom={handleResetZoom}
       />
+      {onLayerChange && onRiskHorizonChange && <LayerControls layers={layers} onChange={onLayerChange} horizon={riskHorizon} onHorizonChange={onRiskHorizonChange} alerts={alerts.length} alertsLoading={alertsLoading} />}
 
       {/* Leyenda Inteligente de Sensores (Esquina Superior Izquierda) */}
       <div className="pointer-events-none absolute left-3 top-3 z-[500] rounded-xl border border-ink-700/80 bg-ink-900/95 p-3 shadow-xl backdrop-blur-md">

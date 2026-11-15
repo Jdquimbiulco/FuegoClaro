@@ -179,6 +179,7 @@ def build_calendar(df: pd.DataFrame, spec: FilterSpec, month: str) -> dict:
         start_date=start.isoformat(),
         end_date=end.isoformat(),
         region_id=spec.region_id,
+        canton_id=spec.canton_id,
         sensor=spec.sensor,
         confidence=spec.confidence,
         daynight=spec.daynight,
@@ -218,6 +219,25 @@ def build_calendar(df: pd.DataFrame, spec: FilterSpec, month: str) -> dict:
             "Los días sin detecciones pueden deberse a ausencia de fuego o a condiciones de observación.",
         ],
     }
+
+
+def build_calendar_year(df: pd.DataFrame, spec: FilterSpec, year: int) -> dict:
+    """Resumen mensual para la lectura de estacionalidad dentro del calendario."""
+    start = date(year, 1, 1)
+    end = date(year, 12, 31)
+    year_spec = FilterSpec(
+        start_date=start.isoformat(), end_date=end.isoformat(), region_id=spec.region_id,
+        canton_id=spec.canton_id, sensor=spec.sensor, confidence=spec.confidence,
+        daynight=spec.daynight, min_frp=spec.min_frp, bbox=spec.bbox,
+    )
+    filtered = apply_filters(df, year_spec)
+    counts = pd.Series(dtype="int64") if filtered.empty else pd.to_datetime(filtered["acq_date_local"], errors="coerce").dt.month.value_counts()
+    max_count = max(1, int(counts.max()) if not counts.empty else 0)
+    months = []
+    for number in range(1, 13):
+        total = int(counts.get(number, 0))
+        months.append({"month": f"{year}-{number:02d}", "number": number, "total": total, "intensity": max(1, min(4, round(total / max_count * 4 + 0.49))) if total else 0})
+    return {"year": year, "months": months, "max_monthly": max_count, "total": sum(item["total"] for item in months), "notes": []}
 
 
 def monthly_peaks(df: pd.DataFrame, spec: FilterSpec) -> dict | None:

@@ -85,6 +85,7 @@ class FilterSpec:
     start_date: str
     end_date: str
     region_id: str | None = None
+    canton_id: str | None = None
     sensor: str | None = None
     confidence: list[str] = field(default_factory=list)
     daynight: str | None = None

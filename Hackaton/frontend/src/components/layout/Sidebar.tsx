@@ -5,22 +5,20 @@ import {
   GitCompareArrows,
   LayoutDashboard,
   Map as MapIcon,
-  ShieldAlert,
-  Sparkles,
+  Moon,
+  Sun,
 } from 'lucide-react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useFilters } from '../../context/FiltersContext'
 import { formatDate } from '../../lib/format'
 import { Badge } from '../ui/Primitives'
-import { ViewModeToggle } from '../ui/ViewModeToggle'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/incendios', label: 'Incendios', icon: ShieldAlert },
   { to: '/mapa', label: 'Mapa', icon: MapIcon },
   { to: '/calendario', label: 'Calendario', icon: CalendarDays },
   { to: '/comparador', label: 'Comparador', icon: GitCompareArrows },
-  { to: '/hallazgos', label: 'Hallazgos', icon: Sparkles },
   { to: '/metodologia', label: 'Metodología', icon: BookOpen },
 ]
 
@@ -84,8 +82,6 @@ export function Sidebar() {
 }
 
 export function MobileNav() {
-  const { pathname } = useLocation()
-  const showViewToggle = !pathname.startsWith('/metodologia')
   return (
     <div className="lg:hidden">
       <div className="flex items-center justify-between border-b border-ink-700/70 bg-ink-900/80 px-4 py-2.5 backdrop-blur-xl">
@@ -98,7 +94,6 @@ export function MobileNav() {
             <p className="text-[9px] uppercase tracking-[0.14em] text-slateish">NASA Space Apps 2026</p>
           </div>
         </div>
-        {showViewToggle && <ViewModeToggle compact />}
       </div>
       <nav className="flex gap-1 overflow-x-auto border-b border-ink-700/60 bg-ink-900/60 px-2 py-1.5">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
@@ -123,9 +118,15 @@ export function MobileNav() {
 
 export function Topbar({ meta }: { meta: ReturnType<typeof useFilters>['meta'] }) {
   const { regionName } = useFilters()
-  const { pathname } = useLocation()
-  const showViewToggle = !pathname.startsWith('/metodologia')
   const live = meta.data_mode === 'real'
+  const [theme, setTheme] = useState<'dark' | 'light'>(() =>
+    localStorage.getItem('fuegoclaro-theme') === 'light' ? 'light' : 'dark',
+  )
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('fuegoclaro-theme', theme)
+  }, [theme])
   return (
     <header className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-ink-800/80 pb-3">
       <div className="flex items-center gap-2.5 text-xs text-slateish">
@@ -143,9 +144,16 @@ export function Topbar({ meta }: { meta: ReturnType<typeof useFilters>['meta'] }
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        {/* Selector de Modo con alta visibilidad */}
-        {showViewToggle && <ViewModeToggle />}
-
+        <button
+          type="button"
+          onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+          className="focus-ring inline-flex h-7 items-center gap-1.5 rounded-full border border-ink-700 bg-ink-850/80 px-2.5 text-[11px] text-slateish transition hover:border-ember-400/50 hover:text-white"
+          aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        >
+          {theme === 'dark' ? <Sun size={13} className="text-amber-300" /> : <Moon size={13} className="text-[#46a3c8]" />}
+          {theme === 'dark' ? 'Claro' : 'Oscuro'}
+        </button>
         <div className="flex items-center gap-2 rounded-full border border-ink-700 bg-ink-850/80 px-3 py-1 text-[11px] text-slateish">
           <span className={`h-2 w-2 rounded-full ${live ? 'bg-mint' : 'bg-amber-400'}`} />
           <span>{live ? 'NASA FIRMS' : 'Modo muestra'}</span>
