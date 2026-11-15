@@ -15,10 +15,17 @@ BACKEND_ROOT = PROJECT_ROOT / "backend"
 
 class Settings(BaseSettings):
     app_name: str = "FuegoClaro API"
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     firms_map_key: str = ""
     data_dir: Path = PROJECT_ROOT / "data"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
+    # Credenciales para NDVI histórico (NASA AppEEARS / Earthdata).
+    # EARTHDATA_TOKEN es un token Bearer de Earthdata. Si no existe, se puede
+    # usar EARTHDATA_USER/EARTHDATA_PASSWORD para obtener uno al vuelo.
+    earthdata_token: str = ""
+    earthdata_user: str = ""
+    earthdata_password: str = ""
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_ROOT / ".env",
@@ -53,6 +60,14 @@ class Settings(BaseSettings):
     @property
     def manifest_file(self) -> Path:
         return self.processed_dir / "manifest.json"
+
+    @property
+    def ml_dir(self) -> Path:
+        return self.processed_dir / "ml"
+
+    @property
+    def cache_dir(self) -> Path:
+        return self.data_dir / "cache"
 
 
 @lru_cache

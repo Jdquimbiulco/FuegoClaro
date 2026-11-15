@@ -8,9 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# CA certificates para las llamadas HTTPS a NASA FIRMS.
+# CA certificates para HTTPS y libgomp para scikit-learn/HistGradientBoosting.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
+    && apt-get install -y --no-install-recommends ca-certificates libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Dependencias primero para aprovechar la caché de capas.
